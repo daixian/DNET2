@@ -412,5 +412,3 @@ IUINT32 ikcp_getconv(const void *ptr);
 #endif
 
 #endif
-
-

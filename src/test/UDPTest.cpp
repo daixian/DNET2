@@ -70,7 +70,7 @@ class UDPServerTask : public Poco::Task
             try {
                 Poco::Net::SocketAddress sender;
                 int n = socket.receiveFrom(buffer, sizeof(buffer), sender); //这一句是阻塞等待接收
-                socket.sendTo(buffer, n, sender);//直接回发
+                socket.sendTo(buffer, n, sender);                           //直接回发
                 //buffer[n] = '\0';
                 //std::cout << sender.toString() << ": " << buffer << std::endl;
             }
@@ -113,6 +113,7 @@ class UDPClientTask : public Poco::Task
     }
 
     char data[1024 * 8];
+    // is used to send and receive UDP packets.
     Poco::Net::DatagramSocket socket;
 };
 
@@ -129,6 +130,7 @@ class UDPTest : public testing::Test
   private:
 };
 
+//一种Task的工作模式
 TEST(UDP, TestSendRece)
 {
     Poco::TaskManager tm;
@@ -137,6 +139,7 @@ TEST(UDP, TestSendRece)
     tm.addObserver(Poco::Observer<ProgressHandler, Poco::TaskFinishedNotification>(pm, &ProgressHandler::onFinished));
     tm.start(new UDPServerTask("UDPServerTask1")); // tm takes ownership
     tm.start(new UDPClientTask("UDPClientTask1"));
+    //这里可以查看网络通信数据了
     tm.joinAll();
 }
 

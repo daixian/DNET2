@@ -15,7 +15,7 @@ class DNETConan(ConanFile):
     license = "<Put the package license here>"
     author = "daixian<amano_tooko@qq.com>"
     url = "https://github.com/daixian/DNET2"
-    description = "标定系统"
+    description = "通信库"
     topics = ("unity", "net", "daixian")
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "build_test": [True, False]}
@@ -27,7 +27,7 @@ class DNETConan(ConanFile):
 
     def requirements(self):
         self.requires.add("dlog/2.5.0@daixian/stable")
-        self.requires.add("poco/1.9.4")
+        self.requires.add("poco/[>=1.10.1]")
 
     def build_requirements(self):
         self.build_requires("gtest/1.8.1@bincrafters/stable")

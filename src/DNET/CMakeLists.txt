@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(SUB_NAME "DNECPP")
+set(SUB_NAME "DNET")
 
 add_definitions(-D UNICODE)
 if(WIN32)
