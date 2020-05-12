@@ -58,15 +58,14 @@ TEST(UDP, send)
 
     for (size_t i = 0; i < 100; i++) {
 
-        int sendLen = 512;
+        int sendLen = 1204;
         kcp_c.Send(sendData, sendLen);
 
         int len = 0;
         while (len <= 0) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             len = kcp_s.Receive(receBuff, sendLen);
         }
-
+        LogI("UDP.test():接收到了一条");
         ASSERT_TRUE(len == sendLen);
     }
 }

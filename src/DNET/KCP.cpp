@@ -64,6 +64,7 @@ class ReceRunnable : public Poco::Runnable
                 LogD("ReceRunnable.run():%s 接收到了数据,长度%d", name, n);
                 mut_kcp->lock();
                 ikcp_input(kcp, buffer, n);
+                ikcp_flush(kcp);
                 mut_kcp->unlock();
             }
             catch (const Poco::Exception& e) {
@@ -127,7 +128,7 @@ class KCP::Impl
     Impl() {}
     ~Impl()
     {
-
+        LogI("KCP.~Impl():释放KCP对象%s", kcpUser.name);
         if (kcpUser.socket != nullptr) {
             kcpUser.socket->close();
         }
