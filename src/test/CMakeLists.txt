@@ -33,8 +33,9 @@ endif()
 find_package (Threads)
 
 # Dependencies
-target_include_directories(${SUB_NAME} PRIVATE  ${CMAKE_SOURCE_DIR}/src
-                                                ${PROJECT_LIB_DIR})
+target_include_directories(${SUB_NAME} PRIVATE ${CMAKE_SOURCE_DIR}
+                                               ${CMAKE_SOURCE_DIR}/src
+                                               ${PROJECT_LIB_DIR})
 
 # 这里exe链接不进来,One may link only to INTERFACE, OBJECT, STATIC or SHARED libraries                                               
 target_link_libraries(${SUB_NAME} PRIVATE ${CONAN_LIBS} ${CMAKE_THREAD_LIBS_INIT} "DNET")
