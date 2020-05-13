@@ -37,6 +37,7 @@ int kcp_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
     }
     catch (const Poco::Exception& e) {
         LogE("KCP.udp_output():异常%s %s", e.what(), e.message().c_str());
+        return -1;
     }
 }
 
@@ -63,13 +64,20 @@ class ReceRunnable : public Poco::Runnable
                 int n = socket->receiveFrom(buffer, sizeof(buffer), sender); //这一句是阻塞等待接收
 
                 LogD("ReceRunnable.run():%s 接收到了数据,长度%d", name, n);
+                if (n == 0) {
+                    //给对面也发一个关闭?
+                    socket->sendBytes("\0", 0, SHUT_RDWR);
+                }
                 mut_kcp->lock();
                 ikcp_input(kcp, buffer, n);
                 ikcp_flush(kcp);
                 mut_kcp->unlock();
             }
+            catch (const Poco::TimeoutException te) {
+                //超时就忽略它
+            }
             catch (const Poco::Exception& e) {
-                LogE("ReceRunnable.run():%s异常%s %s", name, e.what(), e.message().c_str());
+                LogE("ReceRunnable.run():%s 异常%s %s", name, e.what(), e.message().c_str());
             }
         }
     }
@@ -129,34 +137,59 @@ class KCP::Impl
     Impl() {}
     ~Impl()
     {
-        LogI("KCP.~Impl():释放KCP对象%s", kcpUser.name);
+        LogI("KCP.~Impl():%s释放KCP对象", kcpUser.name);
         if (kcpUser.socket != nullptr) {
-            kcpUser.socket->close();
+            try {
+                LogI("KCP.~Impl():%s关闭socket", kcpUser.name);
+                //给对面发一个关闭?
+                kcpUser.socket->sendBytes("\0", 0, SHUT_RDWR);
+                kcpUser.socket->close();
+            }
+            catch (const Poco::Exception& e) {
+                LogE("KCP.~Impl():%s异常%s %s", kcpUser.name, e.what(), e.message().c_str());
+            }
         }
 
-        if (thrServer != nullptr) {
-            runServer->isRun = false;
-            thrServer->join();
+        if (thrRece != nullptr) {
+            runRece->isRun = false;
+        }
+        if (runUpdate != nullptr) {
+            runUpdate->isRun = false;
+        }
+
+        if (thrRece != nullptr) {
+            LogI("KCP.~Impl():%s等待接收线程关闭", kcpUser.name);
+            //好像poco的这个线程可以直接delete,这里直接delete不会报错,但是会到底端口没有释放
+            thrRece->join();
         }
 
         if (thrUpdate != nullptr) {
-            runUpdate->isRun = false;
+            LogI("KCP.~Impl():%s等待update线程关闭", kcpUser.name);
             thrUpdate->join();
         }
 
-        delete runServer;
-        delete runUpdate;
-        delete thrServer;
+        //再次尝试关闭
+        if (kcpUser.socket != nullptr) {
+            try {
+                kcpUser.socket->close();
+            }
+            catch (const Poco::Exception& e) {
+                LogE("KCP.~Impl():%s异常%s %s", kcpUser.name, e.what(), e.message().c_str());
+            }
+        }
+
+        delete thrRece;
         delete thrUpdate;
+        delete runRece;
+        delete runUpdate;
 
         mut_kcp.lock();
-
         ikcp_release(kcp);
         //delete kcp;//使用上面那个就不能delete了
+        mut_kcp.unlock();
 
         delete kcpUser.socket;
-
-        mut_kcp.unlock();
+        LogI("KCP.~Impl():%s 释放完毕!", kcpUser.name);
     }
 
     std::mutex mut_kcp;
@@ -170,10 +203,10 @@ class KCP::Impl
 
     KCPUser kcpUser;
 
-    ReceRunnable* runServer = nullptr;
+    ReceRunnable* runRece = nullptr;
     UpdateRunnable* runUpdate = nullptr;
 
-    Poco::Thread* thrServer = nullptr;
+    Poco::Thread* thrRece = nullptr;
     Poco::Thread* thrUpdate = nullptr;
 
     ///-------------------------------------------------------------------------------------------------
@@ -197,7 +230,8 @@ class KCP::Impl
 
         //它可以设置是否是阻塞
         kcpUser.socket->setBlocking(true);
-
+        //linux下close这个socket并没有引起接收的异常返回,所以只能加一个timeout了
+        kcpUser.socket->setReceiveTimeout(Poco::Timespan::MILLISECONDS * 5000);
         kcp = ikcp_create(conv, &kcpUser);
         // 设置回调函数
         kcp->output = kcp_udp_output;
@@ -206,13 +240,13 @@ class KCP::Impl
         kcp->rx_minrto = 10;
         kcp->fastresend = 1;
 
-        runServer = new ReceRunnable(name, kcp, kcpUser.socket, &mut_kcp);
+        runRece = new ReceRunnable(name, kcp, kcpUser.socket, &mut_kcp);
         runUpdate = new UpdateRunnable(name, kcp, &mut_kcp);
 
-        thrServer = new Poco::Thread();
+        thrRece = new Poco::Thread();
         thrUpdate = new Poco::Thread();
 
-        thrServer->start(*runServer);
+        thrRece->start(*runRece);
         thrUpdate->start(*runUpdate);
     }
 };

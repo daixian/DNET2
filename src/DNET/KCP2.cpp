@@ -37,6 +37,7 @@ int kcp2_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
     }
     catch (const Poco::Exception& e) {
         LogE("KCP2.udp_output():异常%s %s", e.what(), e.message().c_str());
+        return -1;
     }
 }
 
@@ -46,26 +47,23 @@ class KCP2::Impl
     Impl() {}
     ~Impl()
     {
-        LogI("KCP2.~Impl():释放KCP对象%s", kcpUser.name);
+        LogI("KCP2.~Impl():%s 释放KCP对象", kcpUser.name);
         if (kcpUser.socket != nullptr) {
             kcpUser.socket->close();
         }
 
-        ikcp_release(kcp);
+        if (kcp != nullptr)
+            ikcp_release(kcp);
         //delete kcp;//使用上面那个就不能delete了
 
         delete kcpUser.socket;
     }
 
-    std::mutex mut_kcp;
-
     // 初始化 kcp对象，conv为一个表示会话编号的整数，和tcp的 conv一样，通信双
     // 方需保证 conv相同，相互的数据包才能够被认可，user是一个给回调函数的指针
     ikcpcb* kcp = nullptr;
 
-    ///// <summary> UDP socket. </summary>
-    //Poco::Net::DatagramSocket* socket = nullptr;
-
+    //KCPUser数据
     KCPUser kcpUser;
 
     ///-------------------------------------------------------------------------------------------------
@@ -137,7 +135,7 @@ int KCP2::Receive(char* buffer, int len)
     char* receBuf = new char[1024 * 4];
     int n = _impl->kcpUser.socket->receiveFrom(receBuf, 1024 * 4, sender); //这一句是阻塞等待接收
     if (n != -1) {
-        LogD("ReceRunnable.Receive():%s 接收到了数据,长度%d", name, n);
+        LogD("KCP2.Receive():%s 接收到了数据,长度%d", name.c_str(), n);
         ikcp_input(_impl->kcp, receBuf, n);
     }
     delete[] receBuf;

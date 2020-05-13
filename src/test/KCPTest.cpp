@@ -42,7 +42,7 @@ using namespace std;
 //}
 
 //目前100条需要0.5秒
-TEST(KCP, 阻塞套接字，收发)
+TEST(KCP, Blocking_SendRece)
 {
     dlog_set_console_thr(dlog_level::warn);
 
@@ -75,7 +75,7 @@ TEST(KCP, 阻塞套接字，收发)
 }
 
 //这个是没有blocking的KCP实现
-TEST(KCP2, 非阻塞套接字，单个线程自己发自己收)
+TEST(KCP2, NoBlocking_SendRece)
 {
     dlog_set_console_thr(dlog_level::warn);
 
@@ -115,7 +115,7 @@ TEST(KCP2, 非阻塞套接字，单个线程自己发自己收)
 }
 
 //这个是没有blocking的KCP实现
-TEST(KCP2, 非阻塞套接字，一个线程发给另一个线程)
+TEST(KCP2, NoBlocking_SendRece_Two_Thread)
 {
     dlog_set_console_thr(dlog_level::warn);
 
@@ -133,7 +133,7 @@ TEST(KCP2, 非阻塞套接字，一个线程发给另一个线程)
 
     int sendLen = 1024;
 
-    std::atomic_int count = 0;
+    std::atomic_int count{0};
 
     std::thread thrSend = std::thread([&]() {
         kcp_c.Update();
