@@ -44,7 +44,7 @@ using namespace std;
 //目前100条需要0.5秒
 TEST(KCP, Blocking_SendRece)
 {
-    dlog_set_console_thr(dlog_level::debug);
+    dlog_set_console_thr(dlog_level::warn);
 
     KCP kcp_s("server", 1024, "localhost", 9991, "localhost", 8881);
     kcp_s.Init();
@@ -77,7 +77,7 @@ TEST(KCP, Blocking_SendRece)
 //这个是没有blocking的KCP实现
 TEST(KCP2, NoBlocking_SendRece)
 {
-    dlog_set_console_thr(dlog_level::debug);
+    dlog_set_console_thr(dlog_level::warn);
 
     KCP2 kcp_s("server", 1025, "localhost", 9991, "localhost", 8881);
     kcp_s.Init();
@@ -117,7 +117,7 @@ TEST(KCP2, NoBlocking_SendRece)
 //这个是没有blocking的KCP实现
 TEST(KCP2, NoBlocking_SendRece_Two_Thread)
 {
-    dlog_set_console_thr(dlog_level::debug);
+    dlog_set_console_thr(dlog_level::warn);
 
     //这里不能一个localhost一个127.0.0.1,必须全部是ipv4或者v6
     KCP2 kcp_s("server", 1025, "127.0.0.1", 9991, "127.0.0.1", 8881);
@@ -148,6 +148,73 @@ TEST(KCP2, NoBlocking_SendRece_Two_Thread)
     });
 
     std::thread thrRece = std::thread([&]() {
+        kcp_s.Update();
+
+        for (int i = 0; i < 100; i++) {
+            int len = 0;
+            while (len <= 0) {
+                len = kcp_s.Receive(receBuff, sendLen * 2);
+                kcp_s.Update();
+            }
+            count = i + 1;
+            LogI("KCP2.test():接收到了第%d条", i);
+            ASSERT_TRUE(len == sendLen);
+            for (size_t i = 0; i < sendLen; i++) {
+                ASSERT_TRUE(receBuff[i] == sendData[i]);
+            }
+        }
+    });
+
+    thrSend.join();
+    thrRece.join();
+    ASSERT_TRUE(count == 100);
+}
+
+//这个是没有blocking的KCP实现
+TEST(KCP2, NoBlocking_SendRece_Two_Thread_Accept)
+{
+    dlog_set_console_thr(dlog_level::info);
+
+    char* sendData = new char[1024 * 1024];
+    for (size_t i = 0; i < 1024 * 1024; i++) {
+        sendData[i] = (char)i;
+    }
+    char* receBuff = new char[1024 * 1024];
+    char* receBuff2 = new char[1024 * 1024];
+
+    int sendLen = 1024;
+
+    std::atomic_bool isInit_c{false};
+    std::atomic_bool isInit_s{false};
+
+    std::atomic_int count{0};
+
+    //模拟客户端启动了
+    std::thread thrSend = std::thread([&]() {
+        KCP2 kcp_c("client", 1025, "127.0.0.1", 11024, "127.0.0.1", 9991);
+        kcp_c.Init();
+        isInit_c = true;
+        while (!isInit_s.load()) {
+        }
+
+        kcp_c.SendAccept();
+        kcp_c.Update();
+        for (int i = 0; i < 100; i++) {
+            kcp_c.Send(sendData, sendLen);
+            while (count.load() <= i) {
+                kcp_c.Receive(receBuff2, sendLen * 2); //它只是客户端接收回复用来驱动的
+                kcp_c.Update();
+            }
+        }
+    });
+
+    //模拟服务端启动了
+    std::thread thrRece = std::thread([&]() {
+        KCP2 kcp_s("server", 1025, "0.0.0.0", 9991);
+        kcp_s.Init();
+        isInit_s = true;
+        //while (!isInit_c.load()) {
+        //}
         kcp_s.Update();
 
         for (int i = 0; i < 100; i++) {

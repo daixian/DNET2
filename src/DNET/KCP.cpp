@@ -21,7 +21,7 @@ namespace dxlib {
 
 struct KCPUser
 {
-    const char* name;
+    const char* name = "unnamed";
     Poco::Net::DatagramSocket* socket = nullptr;
 };
 
@@ -231,9 +231,9 @@ class KCP::Impl
         try {
             kcpUser.name = name;
 
-            Poco::Net::SocketAddress sa(host, port);
+            Poco::Net::SocketAddress sa(Poco::Net::AddressFamily::IPv4, host, port);
             kcpUser.socket = new Poco::Net::DatagramSocket(sa); //使用一个端口开始一个接收
-            kcpUser.socket->connect(Poco::Net::SocketAddress(remoteHost, remotePort));
+            kcpUser.socket->connect(Poco::Net::SocketAddress(Poco::Net::AddressFamily::IPv4, remoteHost, remotePort));
 
             //它可以设置是否是阻塞
             kcpUser.socket->setBlocking(true);
