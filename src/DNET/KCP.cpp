@@ -64,10 +64,12 @@ class ReceRunnable : public Poco::Runnable
                 int n = socket->receiveFrom(buffer, sizeof(buffer), sender); //这一句是阻塞等待接收
 
                 LogD("ReceRunnable.run():%s 接收到了数据,长度%d", name, n);
+#ifndef _WIN32
                 if (n == 0) {
                     //给对面也发一个关闭?
                     socket->sendBytes("\0", 0, SHUT_RDWR);
                 }
+#endif // !_WIN32
                 mut_kcp->lock();
                 ikcp_input(kcp, buffer, n);
                 ikcp_flush(kcp);
@@ -141,8 +143,12 @@ class KCP::Impl
         if (kcpUser.socket != nullptr) {
             try {
                 LogI("KCP.~Impl():%s关闭socket", kcpUser.name);
+                //windows下好像不支持这种附加SHUT_RDWR的调用,会提示Net Exception Operation not supported.
+                //windows下可以直接close()就会中断阻塞的接收,所以也不需要发送一下
+#ifndef _WIN32
                 //给对面发一个关闭?
                 kcpUser.socket->sendBytes("\0", 0, SHUT_RDWR);
+#endif // !_WIN32
                 kcpUser.socket->close();
             }
             catch (const Poco::Exception& e) {
