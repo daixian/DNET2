@@ -16,12 +16,17 @@ class KCP2
     ///-------------------------------------------------------------------------------------------------
     /// <summary> Constructor. </summary>
     ///
-    /// <remarks> Dx, 2020/5/12. </remarks>
+    /// <remarks>
+    /// 注意localhost可能被解析成一个ipv6,然后poco库就连不上ipv4的127.0.0.1了.
     ///
-    /// <param name="type"> The type. </param>
-    /// <param name="host"> The host. </param>
-    /// <param name="port"> The port. </param>
-    /// <param name="conv"> 一个表示会话编号的整数. </param>
+    /// Dx, 2020/5/12. </remarks>
+    ///
+    /// <param name="name">       名称. </param>
+    /// <param name="conv">       一个表示会话编号的整数. </param>
+    /// <param name="host">       主机名,可以是ip,但是自己的和remote的不能一个是IPv4一个是IPv6. </param>
+    /// <param name="port">       The port. </param>
+    /// <param name="remoteHost"> The remote host. </param>
+    /// <param name="remotePort"> The remote port. </param>
     ///-------------------------------------------------------------------------------------------------
     KCP2(const std::string& name,
          int conv,
