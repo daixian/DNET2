@@ -44,7 +44,7 @@ using namespace std;
 //目前100条需要0.5秒
 TEST(KCP, Blocking_SendRece)
 {
-    dlog_set_console_thr(dlog_level::warn);
+    dlog_set_console_thr(dlog_level::debug);
 
     KCP kcp_s("server", 1024, "localhost", 9991, "localhost", 8881);
     kcp_s.Init();
@@ -77,7 +77,7 @@ TEST(KCP, Blocking_SendRece)
 //这个是没有blocking的KCP实现
 TEST(KCP2, NoBlocking_SendRece)
 {
-    dlog_set_console_thr(dlog_level::warn);
+    dlog_set_console_thr(dlog_level::debug);
 
     KCP2 kcp_s("server", 1025, "localhost", 9991, "localhost", 8881);
     kcp_s.Init();
@@ -117,7 +117,7 @@ TEST(KCP2, NoBlocking_SendRece)
 //这个是没有blocking的KCP实现
 TEST(KCP2, NoBlocking_SendRece_Two_Thread)
 {
-    dlog_set_console_thr(dlog_level::warn);
+    dlog_set_console_thr(dlog_level::debug);
 
     //这里不能一个localhost一个127.0.0.1,必须全部是ipv4或者v6
     KCP2 kcp_s("server", 1025, "127.0.0.1", 9991, "127.0.0.1", 8881);

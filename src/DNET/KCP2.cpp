@@ -53,8 +53,16 @@ class KCP2::Impl
     ~Impl()
     {
         LogI("KCP2.~Impl():%s 释放KCP对象", kcpUser.name);
-        if (kcpUser.socket != nullptr) {
-            kcpUser.socket->close();
+        try {
+            if (kcpUser.socket != nullptr) {
+                kcpUser.socket->close();
+            }
+        }
+        catch (const Poco::Exception& e) {
+            LogE("KCP2.Impl():异常%s %s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("KCP2.Impl():异常:%s", e.what());
         }
 
         if (kcp != nullptr)

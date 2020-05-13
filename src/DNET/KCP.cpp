@@ -228,32 +228,40 @@ class KCP::Impl
     void Init(const char* name, int conv, const std::string& host, int port,
               const std::string& remoteHost, int remotePort)
     {
-        kcpUser.name = name;
+        try {
+            kcpUser.name = name;
 
-        Poco::Net::SocketAddress sa(host, port);
-        kcpUser.socket = new Poco::Net::DatagramSocket(sa); //使用一个端口开始一个接收
-        kcpUser.socket->connect(Poco::Net::SocketAddress(remoteHost, remotePort));
+            Poco::Net::SocketAddress sa(host, port);
+            kcpUser.socket = new Poco::Net::DatagramSocket(sa); //使用一个端口开始一个接收
+            kcpUser.socket->connect(Poco::Net::SocketAddress(remoteHost, remotePort));
 
-        //它可以设置是否是阻塞
-        kcpUser.socket->setBlocking(true);
-        //linux下close这个socket并没有引起接收的异常返回,所以只能加一个timeout了
-        kcpUser.socket->setReceiveTimeout(Poco::Timespan::MILLISECONDS * 5000);
-        kcp = ikcp_create(conv, &kcpUser);
-        // 设置回调函数
-        kcp->output = kcp_udp_output;
+            //它可以设置是否是阻塞
+            kcpUser.socket->setBlocking(true);
+            //linux下close这个socket并没有引起接收的异常返回,所以只能加一个timeout了
+            kcpUser.socket->setReceiveTimeout(Poco::Timespan::MILLISECONDS * 5000);
+            kcp = ikcp_create(conv, &kcpUser);
+            // 设置回调函数
+            kcp->output = kcp_udp_output;
 
-        ikcp_nodelay(kcp, 1, 10, 2, 1);
-        kcp->rx_minrto = 10;
-        kcp->fastresend = 1;
+            ikcp_nodelay(kcp, 1, 10, 2, 1);
+            kcp->rx_minrto = 10;
+            kcp->fastresend = 1;
 
-        runRece = new ReceRunnable(name, kcp, kcpUser.socket, &mut_kcp);
-        runUpdate = new UpdateRunnable(name, kcp, &mut_kcp);
+            runRece = new ReceRunnable(name, kcp, kcpUser.socket, &mut_kcp);
+            runUpdate = new UpdateRunnable(name, kcp, &mut_kcp);
 
-        thrRece = new Poco::Thread();
-        thrUpdate = new Poco::Thread();
+            thrRece = new Poco::Thread();
+            thrUpdate = new Poco::Thread();
 
-        thrRece->start(*runRece);
-        thrUpdate->start(*runUpdate);
+            thrRece->start(*runRece);
+            thrUpdate->start(*runUpdate);
+        }
+        catch (const Poco::Exception& e) {
+            LogE("KCP.Init():异常%s %s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("KCP.Init():异常:%s", e.what());
+        }
     }
 
     ///-------------------------------------------------------------------------------------------------
