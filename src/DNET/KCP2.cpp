@@ -15,6 +15,7 @@
 #include <thread>
 #include <mutex>
 #include "clock.hpp"
+#include <regex>
 
 namespace dxlib {
 
@@ -37,6 +38,10 @@ int kcp2_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
     }
     catch (const Poco::Exception& e) {
         LogE("KCP2.udp_output():异常%s %s", e.what(), e.message().c_str());
+        return -1;
+    }
+    catch (const std::exception& e) {
+        LogE("KCP2.udp_output():异常:%s", e.what());
         return -1;
     }
 }
@@ -78,23 +83,54 @@ class KCP2::Impl
     void Init(const char* name, int conv, const std::string& host, int port,
               const std::string& remoteHost, int remotePort)
     {
-        kcpUser.name = name;
+        try {
+            kcpUser.name = name;
 
-        //Poco::Net::SocketAddress sa(Poco::Net::IPAddress("127.0.0.1"), 24005);
-        Poco::Net::SocketAddress sa(host, port);
-        kcpUser.socket = new Poco::Net::DatagramSocket(sa); //使用一个端口开始一个接收
-        kcpUser.socket->connect(Poco::Net::SocketAddress(remoteHost, remotePort));
+            Poco::Net::SocketAddress sa(host, port);
+            kcpUser.socket = new Poco::Net::DatagramSocket(sa); //使用一个端口开始一个接收
+            kcpUser.socket->connect(Poco::Net::SocketAddress(remoteHost, remotePort));
 
-        //它可以设置是否是阻塞
-        kcpUser.socket->setBlocking(false);
+            //它可以设置是否是阻塞
+            kcpUser.socket->setBlocking(false);
 
-        kcp = ikcp_create(conv, &kcpUser);
-        // 设置回调函数
-        kcp->output = kcp2_udp_output;
+            kcp = ikcp_create(conv, &kcpUser);
+            // 设置回调函数
+            kcp->output = kcp2_udp_output;
 
-        ikcp_nodelay(kcp, 1, 10, 2, 1);
-        kcp->rx_minrto = 10;
-        kcp->fastresend = 1;
+            ikcp_nodelay(kcp, 1, 10, 2, 1);
+            kcp->rx_minrto = 10;
+            kcp->fastresend = 1;
+        }
+        catch (const Poco::Exception& e) {
+            LogE("KCP2.Init():异常%s %s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("KCP2.Init():异常:%s", e.what());
+        }
+    }
+
+    ///-------------------------------------------------------------------------------------------------
+    /// <summary> 根据一个字符串创建一个地址(这个函数不需要,他能自己判断) </summary>
+    ///
+    /// <remarks> Dx, 2020/5/13. </remarks>
+    ///
+    /// <param name="str">  The string. </param>
+    /// <param name="port"> The port. </param>
+    ///
+    /// <returns> The Poco::Net::SocketAddress. </returns>
+    ///-------------------------------------------------------------------------------------------------
+    static Poco::Net::SocketAddress CreatSocketAddress(const std::string& str, int port)
+    {
+        std::smatch sm;
+        const std::regex pattern("((2(5[0-5]|[0-4]\\d))|[0-1]?\\d{1,2})(\\.((2(5[0-5]|[0-4]\\d))|[0-1]?\\d{1,2})){3}");
+
+        //正则匹配IPv4地址,使用match的含义是整个字符串都能匹配上
+        if (std::regex_match(str, sm, pattern)) {
+            return Poco::Net::SocketAddress(Poco::Net::IPAddress(str), port);
+        }
+        else {
+            return Poco::Net::SocketAddress(str, port);
+        }
     }
 };
 
@@ -123,27 +159,36 @@ int KCP2::Receive(char* buffer, int len)
         LogE("KCP2.Receive():%s 还没有启动,不能接收!", name.c_str());
         return 0;
     }
+    try {
+        //先尝试接收,如果能收到那么就直接返回
+        int rece = ikcp_recv(_impl->kcp, buffer, len);
+        if (rece != -1)
+            return rece;
 
-    //先尝试接收,如果能收到那么就直接返回
-    int rece = ikcp_recv(_impl->kcp, buffer, len);
-    if (rece != -1)
+        //尝试接收
+        Poco::Net::SocketAddress sender;
+        //这里应该是要使用临时的buff ,最好大于1400吧
+        char* receBuf = new char[1024 * 4];
+        int n = _impl->kcpUser.socket->receiveFrom(receBuf, 1024 * 4, sender); //这一句是阻塞等待接收
+        if (n != -1) {
+            LogD("KCP2.Receive():%s 接收到了数据,长度%d", name.c_str(), n);
+            ikcp_input(_impl->kcp, receBuf, n);
+            ikcp_flush(_impl->kcp); //尝试暴力flush
+        }
+        delete[] receBuf;
+
+        //LogI("KCP.Receive():%s 执行接收!", name.c_str());
+        rece = ikcp_recv(_impl->kcp, buffer, len);
         return rece;
-
-    //尝试接收
-    Poco::Net::SocketAddress sender;
-    //这里应该是要使用临时的buff ,最好大于1400吧
-    char* receBuf = new char[1024 * 4];
-    int n = _impl->kcpUser.socket->receiveFrom(receBuf, 1024 * 4, sender); //这一句是阻塞等待接收
-    if (n != -1) {
-        LogD("KCP2.Receive():%s 接收到了数据,长度%d", name.c_str(), n);
-        ikcp_input(_impl->kcp, receBuf, n);
-        ikcp_flush(_impl->kcp); //尝试暴力flush
     }
-    delete[] receBuf;
-
-    //LogI("KCP.Receive():%s 执行接收!", name.c_str());
-    rece = ikcp_recv(_impl->kcp, buffer, len);
-    return rece;
+    catch (const Poco::Exception& e) {
+        LogE("KCP2.Receive():异常%s %s", e.what(), e.message().c_str());
+        return -1;
+    }
+    catch (const std::exception& e) {
+        LogE("KCP2.Receive():异常:%s", e.what());
+        return -1;
+    }
 }
 
 int KCP2::Send(const char* data, int len)
@@ -153,9 +198,19 @@ int KCP2::Send(const char* data, int len)
         return 0;
     }
     LogI("KCP2.Send()::%s 开始发送!原始数据长度为%d", name.c_str(), len);
-    ikcp_send(_impl->kcp, data, len);
-    ikcp_flush(_impl->kcp); //尝试暴力flush
-    return 0;
+    try {
+        ikcp_send(_impl->kcp, data, len);
+        ikcp_flush(_impl->kcp); //尝试暴力flush
+        return 0;
+    }
+    catch (const Poco::Exception& e) {
+        LogE("KCP2.Send():异常%s %s", e.what(), e.message().c_str());
+        return -1;
+    }
+    catch (const std::exception& e) {
+        LogE("KCP2.Send():异常:%s", e.what());
+        return -1;
+    }
 }
 
 void KCP2::Update()

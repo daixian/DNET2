@@ -119,10 +119,10 @@ TEST(KCP2, NoBlocking_SendRece_Two_Thread)
 {
     dlog_set_console_thr(dlog_level::warn);
 
-    //这里不能一个localhost一个127.0.0.1
+    //这里不能一个localhost一个127.0.0.1,必须全部是ipv4或者v6
     KCP2 kcp_s("server", 1025, "127.0.0.1", 9991, "127.0.0.1", 8881);
     kcp_s.Init();
-    KCP2 kcp_c("client", 1025, "localhost", 8881, "localhost", 9991);
+    KCP2 kcp_c("client", 1025, "127.0.0.1", 8881, "127.0.0.1", 9991);
     kcp_c.Init();
 
     char* sendData = new char[1024 * 1024];

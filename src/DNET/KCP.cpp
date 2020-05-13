@@ -15,6 +15,7 @@
 #include <thread>
 #include <mutex>
 #include "clock.hpp"
+#include <regex>
 
 namespace dxlib {
 
@@ -229,7 +230,6 @@ class KCP::Impl
     {
         kcpUser.name = name;
 
-        //Poco::Net::SocketAddress sa(Poco::Net::IPAddress("127.0.0.1"), 24005);
         Poco::Net::SocketAddress sa(host, port);
         kcpUser.socket = new Poco::Net::DatagramSocket(sa); //使用一个端口开始一个接收
         kcpUser.socket->connect(Poco::Net::SocketAddress(remoteHost, remotePort));
@@ -254,6 +254,30 @@ class KCP::Impl
 
         thrRece->start(*runRece);
         thrUpdate->start(*runUpdate);
+    }
+
+    ///-------------------------------------------------------------------------------------------------
+    /// <summary> 根据一个字符串创建一个地址(这个函数不需要,他能自己判断) </summary>
+    ///
+    /// <remarks> Dx, 2020/5/13. </remarks>
+    ///
+    /// <param name="str">  The string. </param>
+    /// <param name="port"> The port. </param>
+    ///
+    /// <returns> The Poco::Net::SocketAddress. </returns>
+    ///-------------------------------------------------------------------------------------------------
+    static Poco::Net::SocketAddress CreatSocketAddress(const std::string& str, int port)
+    {
+        std::smatch sm;
+        const std::regex pattern("((2(5[0-5]|[0-4]\\d))|[0-1]?\\d{1,2})(\\.((2(5[0-5]|[0-4]\\d))|[0-1]?\\d{1,2})){3}");
+
+        //正则匹配IPv4地址,使用match的含义是整个字符串都能匹配上
+        if (std::regex_match(str, sm, pattern)) {
+            return Poco::Net::SocketAddress(Poco::Net::IPAddress(str), port);
+        }
+        else {
+            return Poco::Net::SocketAddress(str, port);
+        }
     }
 };
 
