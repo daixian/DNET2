@@ -14,6 +14,7 @@
 #include "./kcp/ikcp.h"
 #include <thread>
 #include <mutex>
+#include "clock.hpp"
 
 namespace dxlib {
 
@@ -26,16 +27,16 @@ struct KCPUser
 // KCP的下层协议输出函数，KCP需要发送数据时会调用它
 // buf/len 表示缓存和长度
 // user指针为 kcp对象创建时传入的值，用于区别多个 KCP对象
-int udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
+int kcp_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
 {
     try {
         //kcp里有几个位置调用udp_output的时候没有传user参数进来,所以不能使用这个参数
         KCPUser* user = (KCPUser*)kcp->user;
-        LogD("udp_output():%s 执行sendBytes()! len=%d", user->name, len);
+        LogD("KCP.udp_output():%s 执行sendBytes()! len=%d", user->name, len);
         return user->socket->sendBytes(buf, len);
     }
     catch (const Poco::Exception& e) {
-        LogE("udp_output():异常%s %s", e.what(), e.message().c_str());
+        LogE("KCP.udp_output():异常%s %s", e.what(), e.message().c_str());
     }
 }
 
@@ -102,13 +103,13 @@ class UpdateRunnable : public Poco::Runnable
 
         while (isRun.load()) {
             try {
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
                 mut_kcp->lock();
                 //LogI("UpdateRunnable.run():调用ikcp_update()");
                 // 以一定频率调用 ikcp_update来更新 kcp状态，并且传入当前时钟（毫秒单位）
                 // 如 10ms调用一次，或用 ikcp_check确定下次调用 update的时间不必每次调用
-                ikcp_update(kcp, clock() / CLOCKS_PER_SEC * 1000);
+                ikcp_update(kcp, iclock());
                 mut_kcp->unlock();
             }
             catch (const Poco::Exception& e) {
@@ -153,6 +154,8 @@ class KCP::Impl
         ikcp_release(kcp);
         //delete kcp;//使用上面那个就不能delete了
 
+        delete kcpUser.socket;
+
         mut_kcp.unlock();
     }
 
@@ -192,11 +195,16 @@ class KCP::Impl
         kcpUser.socket = new Poco::Net::DatagramSocket(sa); //使用一个端口开始一个接收
         kcpUser.socket->connect(Poco::Net::SocketAddress(remoteHost, remotePort));
 
+        //它可以设置是否是阻塞
+        kcpUser.socket->setBlocking(true);
+
         kcp = ikcp_create(conv, &kcpUser);
         // 设置回调函数
-        kcp->output = udp_output;
+        kcp->output = kcp_udp_output;
 
         ikcp_nodelay(kcp, 1, 10, 2, 1);
+        kcp->rx_minrto = 10;
+        kcp->fastresend = 1;
 
         runServer = new ReceRunnable(name, kcp, kcpUser.socket, &mut_kcp);
         runUpdate = new UpdateRunnable(name, kcp, &mut_kcp);
