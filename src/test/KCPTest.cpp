@@ -166,4 +166,5 @@ TEST(KCP2, NoBlocking_SendRece_Two_Thread)
 
     thrSend.join();
     thrRece.join();
+    ASSERT_TRUE(count == 100);
 }

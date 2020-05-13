@@ -137,6 +137,7 @@ int KCP2::Receive(char* buffer, int len)
     if (n != -1) {
         LogD("KCP2.Receive():%s 接收到了数据,长度%d", name.c_str(), n);
         ikcp_input(_impl->kcp, receBuf, n);
+        ikcp_flush(_impl->kcp); //尝试暴力flush
     }
     delete[] receBuf;
 
@@ -153,6 +154,7 @@ int KCP2::Send(const char* data, int len)
     }
     LogI("KCP2.Send()::%s 开始发送!原始数据长度为%d", name.c_str(), len);
     ikcp_send(_impl->kcp, data, len);
+    ikcp_flush(_impl->kcp); //尝试暴力flush
     return 0;
 }
 
