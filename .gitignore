@@ -332,3 +332,4 @@ ASALocalRun/
 /lib
 /download
 /build
+.DS_Store

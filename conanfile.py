@@ -21,13 +21,13 @@ class DNETConan(ConanFile):
     options = {"shared": [True, False], "build_test": [True, False]}
     default_options = {"shared": False,
                        "build_test": True,
-                       "dlog:shared": True}
+                       "dlog:shared": False}
     generators = "cmake"
     exports_sources = "src/*"
 
     def requirements(self):
-        self.requires.add("dlog/2.5.0@daixian/stable")
-        self.requires.add("poco/1.10.1")
+        self.requires.add("dlog/[>=2.5.0]@daixian/stable")
+        self.requires.add("poco/[>=1.10.1]@daixian/stable")
 
     def build_requirements(self):
         self.build_requires("gtest/1.8.1@bincrafters/stable")
