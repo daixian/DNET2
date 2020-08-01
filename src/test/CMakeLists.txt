@@ -26,8 +26,10 @@ if (CMAKE_VERSION  VERSION_LESS 2.8.11)
 endif()
 
 if(WIN32)
-    add_custom_command(TARGET ${SUB_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CONAN_BIN_DIRS_DLOG}" ${EXECUTABLE_OUTPUT_PATH}) #拷贝整个文件夹算了
+    if(DEFINED CONAN_BIN_DIRS_DLOG)
+        add_custom_command(TARGET ${SUB_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CONAN_BIN_DIRS_DLOG}" ${EXECUTABLE_OUTPUT_PATH}) #拷贝整个文件夹算了
+    endif()
 endif()
 
 find_package (Threads)

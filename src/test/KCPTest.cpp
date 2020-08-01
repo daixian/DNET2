@@ -202,7 +202,7 @@ TEST(KCP2, NoBlocking_SendRece_Two_Thread_Accept)
         for (int i = 0; i < 100; i++) {
             kcp_c.Send(sendData, sendLen);
             while (count.load() <= i) {
-                kcp_c.Receive(receBuff2, sendLen * 2); //它只是客户端接收回复用来驱动的
+                kcp_c.Receive(receBuff2, sendLen); //它只是客户端接收回复用来驱动的
                 kcp_c.Update();
             }
         }
@@ -220,7 +220,7 @@ TEST(KCP2, NoBlocking_SendRece_Two_Thread_Accept)
         for (int i = 0; i < 100; i++) {
             int len = 0;
             while (len <= 0) {
-                len = kcp_s.Receive(receBuff, sendLen * 2);
+                len = kcp_s.Receive(receBuff, sendLen);
                 kcp_s.Update();
             }
             count = i + 1;

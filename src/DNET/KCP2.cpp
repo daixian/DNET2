@@ -173,7 +173,11 @@ class KCP2::Impl
         try {
             //先尝试接收,如果能收到那么就直接返回
             int rece = ikcp_recv(kcp, buffer, len);
-            if (rece != -1)
+            if (rece == -3) {
+                LogE("KCP2.Receive():提供的buffer过小len=%d,peeksize=%d,KCP表示不能接收!", len, ikcp_peeksize(kcp));
+                return rece;
+            }
+            if (rece > 0) //实际上接收成功了
                 return rece;
 
             //尝试接收
@@ -203,6 +207,9 @@ class KCP2::Impl
             delete[] receBuf; //这里正常接收了,释放
 
             rece = ikcp_recv(kcp, buffer, len);
+            if (rece == -3) {
+                LogE("KCP2.Receive():提供的buffer过小len=%d,peeksize=%d,KCP表示不能接收!", len, ikcp_peeksize(kcp));
+            }
             return rece;
         }
         catch (const Poco::Exception& e) {

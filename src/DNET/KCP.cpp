@@ -317,6 +317,9 @@ int KCP::Receive(char* buffer, int len)
     //LogI("KCP.Receive():%s 执行接收!", name.c_str());
     _impl->mut_kcp.lock();
     int rece = ikcp_recv(_impl->kcp, buffer, len);
+    if (rece == -3) {
+        LogE("KCP.Receive():提供的buffer过小len=%d,peeksize=%d,KCP表示不能接收!", len, ikcp_peeksize(_impl->kcp));
+    }
     _impl->mut_kcp.unlock();
     return rece;
 }
