@@ -26,8 +26,8 @@ class DNETConan(ConanFile):
     exports_sources = "src/*"
 
     def requirements(self):
-        self.requires.add("dlog/[>=2.5.0]@daixian/stable")
-        self.requires.add("poco/[>=1.10.1]@daixian/stable")
+        self.requires.add("dlog/[>=2.6.0]@daixian/stable")
+        self.requires.add("poco/[>=1.10.1]")
 
     def build_requirements(self):
         self.build_requires("gtest/1.8.1@bincrafters/stable")
@@ -37,7 +37,14 @@ class DNETConan(ConanFile):
         转换python的设置到CMake
         '''
         cmake = CMake(self)
-        cmake.definitions["DNET_BUILD_SHARED"] = self.options.shared
+        if self.settings.os == "Android":
+            # 如果是Android那么要编译成so
+            cmake.definitions["DNET_BUILD_SHARED"] = True
+        if self.settings.os == "iOS":
+            # 如果是iOS那么要编译成.a
+            cmake.definitions["DNET_BUILD_SHARED"] = False
+        else:
+            cmake.definitions["DNET_BUILD_SHARED"] = self.options.shared
         cmake.definitions["DNET_BUILD_TESTS"] = self.options.build_test
         return cmake
 
