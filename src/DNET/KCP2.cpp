@@ -134,7 +134,7 @@ class KCP2::Impl
     inline int SendAccept()
     {
         if (kcp == nullptr || kcpUser.remote == nullptr) {
-            LogE("KCP2.Receive():%s 还没有初始化,不能发送!", kcpUser.name);
+            LogE("KCP2.SendAccept():%s 还没有初始化,不能发送!", kcpUser.name);
             return -1;
         }
         LogI("KCP2.SendAccept():%s 尝试向服务器发送认证...", kcpUser.name);
@@ -271,23 +271,40 @@ KCP2::~KCP2()
 
 void KCP2::Init()
 {
+    if (_impl == nullptr) {
+        _impl = new Impl();
+    }
     _impl->Init(name.c_str(), conv, host, port, remoteHost, remotePort);
+}
+
+void KCP2::Close()
+{
+    delete _impl;
+    _impl = nullptr;
 }
 
 int KCP2::SendAccept()
 {
+    if (_impl == nullptr || _impl->kcp == nullptr) {
+        LogE("KCP2.SendAccept()::%s 还没有初始化!", name.c_str());
+        return -1;
+    }
     return _impl->SendAccept();
 }
 
 int KCP2::Receive(char* buffer, int len)
 {
+    if (_impl == nullptr || _impl->kcp == nullptr) {
+        LogE("KCP2.Receive()::%s 还没有初始化!", name.c_str());
+        return -1;
+    }
     return _impl->Receive(buffer, len);
 }
 
 int KCP2::Send(const char* data, int len)
 {
-    if (_impl->kcp == nullptr) {
-        LogE("KCP2.Send()::%s 还没有初始化,不能发送!", name.c_str());
+    if (_impl == nullptr || _impl->kcp == nullptr) {
+        LogE("KCP2.Send()::%s 还没有初始化!", name.c_str());
         return 0;
     }
     LogI("KCP2.Send()::%s 开始发送!原始数据长度为%d", name.c_str(), len);
@@ -308,7 +325,7 @@ int KCP2::Send(const char* data, int len)
 
 void KCP2::Update()
 {
-    if (_impl->kcp != nullptr)
+    if (_impl != nullptr && _impl->kcp != nullptr)
         ikcp_update(_impl->kcp, iclock());
 }
 } // namespace dxlib

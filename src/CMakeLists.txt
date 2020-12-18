@@ -54,8 +54,7 @@ set(RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory(DNET)
 
-if(DNET_BUILD_TESTS)
-enable_testing()
-include(CTest)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
-endif()
+# if(DNET_BUILD_TESTS)
+# enable_testing()
+# include(CTest)
+# endif()

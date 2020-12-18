@@ -10,6 +10,7 @@
 #include "Poco/Thread.h"
 #include "Poco/Runnable.h"
 #include "Poco/RunnableAdapter.h"
+#include "Poco/Net/NetException.h"
 
 #include "./kcp/ikcp.h"
 #include <thread>
@@ -79,8 +80,21 @@ class ReceRunnable : public Poco::Runnable
             catch (const Poco::TimeoutException te) {
                 //超时就忽略它
             }
+            catch (const Poco::Net::InvalidSocketException e) {
+                if (isRun.load()) {
+                    LogE("ReceRunnable.run():%s InvalidSocketException异常%s %s", name, e.what(), e.message().c_str());
+                }
+                else {
+                    LogI("ReceRunnable.run():%s InvalidSocketException异常%s %s", name, e.what(), e.message().c_str());
+                }
+            }
             catch (const Poco::Exception& e) {
-                LogE("ReceRunnable.run():%s 异常%s %s", name, e.what(), e.message().c_str());
+                if (isRun.load()) {
+                    LogE("ReceRunnable.run():%s 异常%s %s", name, e.what(), e.message().c_str());
+                }
+                else {
+                    LogI("ReceRunnable.run():%s 异常%s %s", name, e.what(), e.message().c_str());
+                }
             }
         }
     }
@@ -88,7 +102,7 @@ class ReceRunnable : public Poco::Runnable
     const char* name;
     std::atomic_bool isRun{true};
 
-    /// <summary> UDP默认分片是1400,这个值要大于1400. </summary>
+    // UDP默认分片是1400,这个值要大于1400.
     char buffer[1024 * 4];
 
     Poco::Net::DatagramSocket* socket;
@@ -113,19 +127,29 @@ class UpdateRunnable : public Poco::Runnable
         LogD("UpdateRunnable.run():%s kcp->user赋值完毕...", name);
 
         while (isRun.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            mut_kcp->lock();
             try {
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-
-                mut_kcp->lock();
                 //LogI("UpdateRunnable.run():调用ikcp_update()");
+
                 // 以一定频率调用 ikcp_update来更新 kcp状态，并且传入当前时钟（毫秒单位）
                 // 如 10ms调用一次，或用 ikcp_check确定下次调用 update的时间不必每次调用
                 ikcp_update(kcp, iclock());
-                mut_kcp->unlock();
+            }
+            catch (const Poco::Net::InvalidSocketException e) {
+                if (isRun.load()) {
+                    LogE("UpdateRunnable.run():%s InvalidSocketException异常%s %s", name, e.what(), e.message().c_str());
+                }
             }
             catch (const Poco::Exception& e) {
-                LogE("UpdateRunnable.run():%s异常%s %s", name, e.what(), e.message().c_str());
+                if (isRun.load()) {
+                    LogE("UpdateRunnable.run():%s 异常%s %s", name, e.what(), e.message().c_str());
+                }
+                else {
+                    LogI("UpdateRunnable.run():%s 异常%s %s", name, e.what(), e.message().c_str());
+                }
             }
+            mut_kcp->unlock();
         }
     }
     const char* name;
@@ -305,12 +329,22 @@ KCP::~KCP()
 
 void KCP::Init()
 {
+    if (_impl == nullptr) {
+        _impl = new Impl();
+    }
     _impl->Init(name.c_str(), conv, host, port, remoteHost, remotePort);
+}
+
+void KCP::Close()
+{
+    delete _impl;
+    _impl = nullptr;
 }
 
 int KCP::Receive(char* buffer, int len)
 {
-    if (_impl->kcp == nullptr) {
+
+    if (_impl == nullptr || _impl->kcp == nullptr) {
         LogE("KCP.Receive():%s 还没有启动,不能接收!", name.c_str());
         return 0;
     }
@@ -326,7 +360,7 @@ int KCP::Receive(char* buffer, int len)
 
 int KCP::Send(const char* data, int len)
 {
-    if (_impl->kcp == nullptr) {
+    if (_impl == nullptr || _impl->kcp == nullptr) {
         LogE("KCP.Send()::%s 还没有连接,不能发送!", name.c_str());
         return 0;
     }
