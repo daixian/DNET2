@@ -1,7 +1,8 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+﻿cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 # 定义UNICODE会是TCHAR为wchar
 # add_definitions(-D UNICODE)
@@ -36,19 +37,19 @@ message(STATUS "SOURCE_LIST = ${SOURCE_LIST}")
 # set(NATNETSDK_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../NatNetSDK/lib/x64")
 # link_directories(${NATNETSDK_LIB_DIR})
 
-# 生成库
-add_library(${SRC_NAME}
-            STATIC
+# 生成可执行文件
+add_library(${SRC_NAME}.so
+            SHARED
             ${SOURCE_LIST})
-
 
 find_package (Threads)
 
 message(STATUS "CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}")
 message(STATUS "CONAN_LIBS = ${CONAN_LIBS}")
 
-target_include_directories(${SRC_NAME} PRIVATE ${CMAKE_SOURCE_DIR})
-target_link_libraries(${SRC_NAME} PRIVATE ${CONAN_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
+target_include_directories(${SRC_NAME}.so PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../)
+target_link_libraries(${SRC_NAME}.so PRIVATE ${CONAN_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${SRC_NAME})
 
 # if(WIN32)
 #     #链接某些自定义的依赖的库

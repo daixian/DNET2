@@ -1,17 +1,19 @@
 ﻿#pragma once
 
-#include "./kcp/ikcp.h"
 #include <string>
 
 namespace dxlib {
 
 /**
- * KCP的数据收发,这个实现使用的是非阻塞套接字,并且带的简单的认证逻辑实现.
+ * KCP的数据收发,这个实现使用的是非阻塞套接字.
+ * 一个对象带有一个socket,然后需要支持和多个对象之间的通信.
+ * 两个对象之间的握手:始终使用0号conv进行握手.
+ * 
  *
  * @author daixian
  * @date 2020/5/12
  */
-class KCP2
+class KCPX
 {
   public:
     /**
@@ -20,31 +22,11 @@ class KCP2
      * @author daixian
      * @date 2020/5/12
      *
-     * @param  name       名称.
-     * @param  conv       一个表示会话编号的整数(只有一致的两个才能互通).
-     * @param  host       主机名,可以是ip,但是自己的和remote的不能一个是IPv4一个是IPv6.
-     * @param  port       The port.
-     * @param  remoteHost The remote host.
-     * @param  remotePort The remote port.
-     */
-    KCP2(const std::string& name,
-         int conv,
-         const std::string& host, int port,
-         const std::string& remoteHost, int remotePort);
-
-    /**
-     * 只知道自己的ip和端口,此时启动之后在等待对方连入,如果服务端是这样启动的话, 那么客户端必须要先SendAccept.
-     *
-     * @author daixian
-     * @date 2020/5/14
-     *
      * @param  name 名称.
-     * @param  conv 一个表示会话编号的整数.
-     * @param  host The host.
+     * @param  host 主机名,可以是ip,但是自己的和remote的不能一个是IPv4一个是IPv6.
      * @param  port The port.
      */
-    KCP2(const std::string& name,
-         int conv,
+    KCPX(const std::string& name,
          const std::string& host, int port);
 
     /**
@@ -53,8 +35,9 @@ class KCP2
      * @author daixian
      * @date 2020/5/12
      */
-    ~KCP2();
+    ~KCPX();
 
+    // 自己的服务器名字
     std::string name;
 
     // 一个表示会话编号的整数.
@@ -66,11 +49,11 @@ class KCP2
     // 端口.
     int port = -1;
 
-    //  远端主机.
-    std::string remoteHost;
+    ////  远端主机.
+    //std::string remoteHost;
 
-    // 远端端口.
-    int remotePort = -1;
+    //// 远端端口.
+    //int remotePort = -1;
 
     /**
      * 初始化.

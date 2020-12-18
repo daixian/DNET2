@@ -22,7 +22,11 @@ namespace dxlib {
 struct KCPUser
 {
     const char* name = "unnamed";
+
+    // 自己的socket
     Poco::Net::DatagramSocket* socket = nullptr;
+
+    // 要发送过去的地址
     Poco::Net::SocketAddress* remote = nullptr;
 };
 
@@ -87,15 +91,19 @@ class KCP2::Impl
     /// <summary> 同意连接的认证信息. </summary>
     std::string acceptStr = "xuexue_kcp";
 
-    ///-------------------------------------------------------------------------------------------------
-    /// <summary> 启动工作. </summary>
-    ///
-    /// <remarks> Dx, 2020/5/12. </remarks>
-    ///
-    /// <param name="host"> The host. </param>
-    /// <param name="port"> The port. </param>
-    /// <param name="conv"> The convert. </param>
-    ///-------------------------------------------------------------------------------------------------
+    /**
+     * 启动工作.
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @param  name       The name.
+     * @param  conv       The convert.
+     * @param  host       The host.
+     * @param  port       The port.
+     * @param  remoteHost The remote host.
+     * @param  remotePort The remote port.
+     */
     inline void Init(const char* name, int conv, const std::string& host, int port,
                      const std::string& remoteHost, int remotePort)
     {
@@ -161,14 +169,23 @@ class KCP2::Impl
         return -1;
     }
 
+    /**
+     * 接收.未初始化返回-1,buffer长度不够返回-2.
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @param [in,out] buffer If non-null, the buffer.
+     * @param          len    The length.
+     *
+     * @returns An int.
+     */
     inline int Receive(char* buffer, int len)
     {
         if (kcp == nullptr) {
             LogE("KCP2.Receive():%s 还没有启动,不能接收!", kcpUser.name);
             return -1;
         }
-        //这里可能是要使用临时的buff ,最好大于1400吧
-        char* receBuf = new char[1024 * 4];
 
         try {
             //先尝试接收,如果能收到那么就直接返回
@@ -181,6 +198,8 @@ class KCP2::Impl
                 return rece;
 
             //尝试接收
+            //这里可能是要使用临时的buff ,最好大于1400吧
+            char* receBuf = new char[1024 * 4];
             Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
             int n = kcpUser.socket->receiveFrom(receBuf, 1024 * 4, remote);
             if (n != -1) {
@@ -218,7 +237,7 @@ class KCP2::Impl
         catch (const std::exception& e) {
             LogE("KCP2.Receive():异常:%s", e.what());
         }
-        delete[] receBuf; //这里不正常接工作,也释放
+
         return -1;
     }
 
