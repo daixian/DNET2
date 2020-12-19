@@ -7,7 +7,6 @@
 using namespace dxlib;
 using namespace std;
 
-//目前100条需要0.5秒
 TEST(KCPX, Accept)
 {
     dlog_set_console_thr(dlog_level::debug);
@@ -27,12 +26,18 @@ TEST(KCPX, Accept)
         std::this_thread::yield();
         if (kcp_s.RemoteCount() == 1 &&
             kcp_c.RemoteCount() == 1) {
+            auto remotes = kcp_s.GetRemotes();
+            ASSERT_EQ(remotes.size(), 1);
+            ASSERT_EQ(remotes[1], "client"); //server端得到的远程名字为client
+
+            remotes = kcp_c.GetRemotes();
+            ASSERT_EQ(remotes.size(), 1);
+            ASSERT_EQ(remotes[1], "server"); //client端得到的远程名字为server
             break;
         }
     }
 }
 
-//目前100条需要0.5秒
 TEST(KCPX, SendRece)
 {
     dlog_set_console_thr(dlog_level::debug);
@@ -54,17 +59,28 @@ TEST(KCPX, SendRece)
             ASSERT_EQ(msgs[1][0], "123456");
             successCount++;
             LogI("successCount=%d", successCount);
-            if (successCount > 100) {
+            if (successCount > 200) {
                 break;
             }
         }
 
         kcp_c.Receive(msgs);
+        if (!msgs.empty()) {
+            ASSERT_EQ(msgs.size(), 1);
+            ASSERT_EQ(msgs[1].size(), 1);
+            ASSERT_EQ(msgs[1][0], "abcdefg");
+            successCount++;
+            LogI("successCount=%d", successCount);
+            if (successCount > 200) {
+                break;
+            }
+        }
 
         std::this_thread::yield();
         if (kcp_s.RemoteCount() == 1 &&
             kcp_c.RemoteCount() == 1) {
-            kcp_c.Send(1, "123456", 6);
+            kcp_c.Send(1, "123456", 6);  //c->s
+            kcp_s.Send(1, "abcdefg", 7); //s->c
         }
     }
 }

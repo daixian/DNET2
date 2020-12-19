@@ -243,7 +243,7 @@ class KCPX::Impl
                         remotes[conv] = kcp; //添加这个新客户端
 
                         isWaitAcceptReply = false;
-                        acceptUser->name = "unnamed";
+                        acceptUser->name = "unnamed"; //客户端这边不再设置远程名是wait
                     }
                 }
                 else {
@@ -254,6 +254,7 @@ class KCPX::Impl
                     std::string replyStr = kcpUser->accept.ReplyAcceptString(acceptStr, name, conv); //使用这个新的客户端用户做accept
                     if (replyStr.empty()) {
                         // 非法的认证信息
+                        LogE("KCPX.kcpAcceptReceive():非法的认证信息!");
                         delete kcpUser;
                     }
                     else {
@@ -275,7 +276,7 @@ class KCPX::Impl
                         kcp->rx_minrto = 10;
                         kcp->fastresend = 1;
                         remotes[conv] = kcp; //添加这个新客户端
-                        LogI("KCPX.kcpAcceptReceive():添加了一个新客户端conv=%d", conv);
+                        LogI("KCPX.kcpAcceptReceive():添加了一个新客户端,分配conv=%d", conv);
                     }
                 }
             }
@@ -493,4 +494,23 @@ int KCPX::RemoteCount()
     return static_cast<int>(_impl->remotes.size());
 }
 
+std::map<int, std::string> KCPX::GetRemotes()
+{
+    std::map<int, std::string> result;
+    for (auto& kvp : _impl->remotes) {
+        KCPXUser* user = (KCPXUser*)(kvp.second->user);
+        result[kvp.first] = user->name;
+    }
+    return result;
+}
+
+int KCPX::GetConvIDWithName(const std::string& name)
+{
+    for (auto& kvp : _impl->remotes) {
+        KCPXUser* user = (KCPXUser*)(kvp.second->user);
+        if (user->name == name)
+            return kvp.first;
+    }
+    return -1;
+}
 } // namespace dxlib

@@ -83,7 +83,7 @@ class KCPX
     int Receive(std::map<int, std::vector<std::string>>& msgs);
 
     /**
-     * 非阻塞的发送一段数据.
+     * 非阻塞的发送一段数据.正常发送成功返回0.
      *
      * @author daixian
      * @date 2020/5/12
@@ -91,7 +91,7 @@ class KCPX
      * @param  data 要发送的数据.
      * @param  len  数据长度.
      *
-     * @returns An int.
+     * @returns 正常发送成功返回0.
      */
     int Send(int conv, const char* data, int len);
 
@@ -114,6 +114,28 @@ class KCPX
      * @returns An int.
      */
     int RemoteCount();
+
+    /**
+     * 得到当前所有记录的Remote名字.
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @returns The remotes.
+     */
+    std::map<int, std::string> GetRemotes();
+
+    /**
+     * 通过一个名字查询一个ConvID
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @param  name The name.
+     *
+     * @returns The convert with name.
+     */
+    int GetConvIDWithName(const std::string& name);
 
   private:
     class Impl;

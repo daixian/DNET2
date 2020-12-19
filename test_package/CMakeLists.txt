@@ -68,5 +68,7 @@ target_include_directories(${SUB_NAME} PRIVATE ${CMAKE_SOURCE_DIR} "${CMAKE_SOUR
 # 这里exe链接不进来,One may link only to INTERFACE, OBJECT, STATIC or SHARED libraries                                               
 target_link_libraries(${SUB_NAME} PRIVATE ${CONAN_LIBS} ${CMAKE_THREAD_LIBS_INIT} "DNET")
 
+add_subdirectory("Server")
+add_subdirectory("Client")
 # gtest_discover_tests(${SUB_NAME})
 # add_test(NAME AllCppTest COMMAND ${SUB_NAME})
