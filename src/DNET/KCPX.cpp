@@ -243,6 +243,7 @@ class KCPX::Impl
                         remotes[conv] = kcp; //添加这个新客户端
 
                         isWaitAcceptReply = false;
+                        acceptUser->name = "unnamed";
                     }
                 }
                 else {
