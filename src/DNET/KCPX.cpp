@@ -152,8 +152,8 @@ class KCPX::Impl
             kcpAccept->output = kcpx_udp_output;
 
             ikcp_nodelay(kcpAccept, 1, 10, 2, 1);
-            kcpAccept->rx_minrto = 10;
-            kcpAccept->fastresend = 1;
+            //kcpAccept->rx_minrto = 10;
+            //kcpAccept->fastresend = 1;
         }
         catch (const Poco::Exception& e) {
             LogE("KCPX.Init():异常%s %s", e.what(), e.message().c_str());
@@ -238,8 +238,8 @@ class KCPX::Impl
                         kcp->output = kcpx_udp_output;
 
                         ikcp_nodelay(kcp, 1, 10, 2, 1);
-                        kcp->rx_minrto = 10;
-                        kcp->fastresend = 1;
+                        //kcp->rx_minrto = 10;
+                        //kcp->fastresend = 1;
                         remotes[conv] = kcp; //添加这个新客户端
 
                         isWaitAcceptReply = false;
@@ -273,8 +273,8 @@ class KCPX::Impl
                         kcp->output = kcpx_udp_output;
 
                         ikcp_nodelay(kcp, 1, 10, 2, 1);
-                        kcp->rx_minrto = 10;
-                        kcp->fastresend = 1;
+                        //kcp->rx_minrto = 10;
+                        //kcp->fastresend = 1;
                         remotes[conv] = kcp; //添加这个新客户端
                         LogI("KCPX.kcpAcceptReceive():添加了一个新客户端,分配conv=%d", conv);
                     }
@@ -351,6 +351,20 @@ class KCPX::Impl
         }
 
         return vRece.size();
+    }
+
+    int WaitSendCount(int conv)
+    {
+        if (socket == nullptr) {
+            LogE("KCPX.WaitSendCount():%s 还没有初始化,不能发送!", name);
+            return 0;
+        }
+        if (remotes.find(conv) == remotes.end()) {
+            LogE("KCPX.WaitSendCount():remotes中不包含conv=%d的项!", conv);
+            return 0;
+        }
+        ikcpcb* kcp = remotes[conv];
+        return ikcp_waitsnd(kcp);
     }
 
     /**
@@ -489,6 +503,11 @@ int KCPX::SendAccept(const std::string& host, int port)
     return res;
 }
 
+int KCPX::WaitSendCount(int conv)
+{
+    return _impl->WaitSendCount(conv);
+}
+
 int KCPX::RemoteCount()
 {
     return static_cast<int>(_impl->remotes.size());
@@ -513,4 +532,5 @@ int KCPX::GetConvIDWithName(const std::string& name)
     }
     return -1;
 }
+
 } // namespace dxlib

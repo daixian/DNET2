@@ -106,6 +106,18 @@ class KCPX
     int SendAccept(const std::string& host, int port);
 
     /**
+     * Wait send count
+     *
+     * @author daixian
+     * @date 2020/12/20
+     *
+     * @param  conv The convert.
+     *
+     * @returns An int.
+     */
+    int WaitSendCount(int conv);
+
+    /**
      * Remote count
      *
      * @author daixian

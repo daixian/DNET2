@@ -19,6 +19,7 @@ int main(int argc, char* argv[])
 
     dlog_init("log", "DNETServer", dlog_init_relative::MODULE);
     dlog_memory_log_enable(false);
+    dlog_set_console_thr(dlog_level::info);
 
     KCPX kcp_c("client", "localhost", 8882);
     kcp_c.Init();
@@ -39,11 +40,13 @@ int main(int argc, char* argv[])
     while (true) {
         kcp_c.Receive(msgs);
         poco_assert(msgs.empty());
-        std::string str = "1234567890 - " + std::to_string(count);
-        int rece = kcp_c.Send(conv, str.c_str(), str.size());
-        LogI("发送条数=%d,result=%d", count, rece);
-        count++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (kcp_c.WaitSendCount(conv) < 2) {
+            std::string str = "1234567890 - " + std::to_string(count);
+            int rece = kcp_c.Send(conv, str.c_str(), str.size());
+            LogI("发送条数=%d,result=%d", count, rece);
+            count++;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     return 0;

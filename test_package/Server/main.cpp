@@ -15,6 +15,9 @@ int main(int argc, char* argv[])
     using xuexue::csharp::Path;
 
     dlog_init("log", "DNETServer", dlog_init_relative::MODULE);
+    dlog_memory_log_enable(false);
+    dlog_set_console_thr(dlog_level::info);
+
     KCPX kcp_s("server", "localhost", 9991);
     kcp_s.Init();
 
