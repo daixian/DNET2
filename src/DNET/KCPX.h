@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <string>
+#include <vector>
+#include <map>
 
 namespace dxlib {
 
@@ -40,9 +42,6 @@ class KCPX
     // 自己的服务器名字
     std::string name;
 
-    // 一个表示会话编号的整数.
-    int conv;
-
     // 主机.
     std::string host;
 
@@ -72,27 +71,16 @@ class KCPX
     void Close();
 
     /**
-     * 向服务端发送一条认证字符串,然后等待服务器回复.这个函数是会阻塞一段时间的.
-     *
-     * @author daixian
-     * @date 2020/5/14
-     *
-     * @returns An int.
-     */
-    int SendAccept();
-
-    /**
-     * 非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收长度.
+     * 非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
      *
      * @author daixian
      * @date 2020/5/12
      *
-     * @param [in,out] buffer bufferr.
-     * @param          len    数据长度.
+     * @param [out] msgs 以conv为key的所有客户端的消息.
      *
-     * @returns 返回大于0的实际接收到的长度
+     * @returns 返回大于0的实际接收到的消息条数.
      */
-    int Receive(char* buffer, int len);
+    int Receive(std::map<int, std::vector<std::string>>& msgs);
 
     /**
      * 非阻塞的发送一段数据.
@@ -105,15 +93,27 @@ class KCPX
      *
      * @returns An int.
      */
-    int Send(const char* data, int len);
+    int Send(int conv, const char* data, int len);
 
     /**
-     * 需要定时执行的update.
+     * 向服务端发送一条认证字符串,然后等待服务器回复.
      *
      * @author daixian
-     * @date 2020/5/13
+     * @date 2020/5/14
+     *
+     * @returns An int.
      */
-    void Update();
+    int SendAccept(const std::string& host, int port);
+
+    /**
+     * Remote count
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @returns An int.
+     */
+    int RemoteCount();
 
   private:
     class Impl;

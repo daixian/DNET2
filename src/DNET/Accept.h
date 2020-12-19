@@ -25,9 +25,11 @@ class Accept
      * @author daixian
      * @date 2020/12/19
      *
+     * @param  name 客户端自己的名字.
+     *
      * @returns The accept string.
      */
-    std::string CreateAcceptString();
+    std::string CreateAcceptString(const std::string& name);
 
     /**
      * 对一个随机的认证字符串进行回应.
@@ -39,7 +41,7 @@ class Accept
      * @param  name         自己的名字.
      * @param  conv         一个用于表示会话编号的整数.
      *
-     * @returns A std::string.
+     * @returns 如果认证失败返回空字符串.
      */
     std::string ReplyAcceptString(const std::string& acceptString, const std::string& name, int conv);
 
@@ -57,7 +59,39 @@ class Accept
      */
     bool VerifyReplyAccept(const std::string& replyAcceptString, std::string& serName, int& conv);
 
+    /**
+     * 是否已经校验过了.
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @returns True if verified, false if not.
+     */
+    bool isVerified();
+
+    /**
+     * Name c
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @returns A std::string.
+     */
+    std::string nameC();
+
+    /**
+     * Name s
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @returns A std::string.
+     */
+    std::string nameS();
+
   private:
+    class Impl;
+    Impl* _impl;
 };
 
 } // namespace dxlib

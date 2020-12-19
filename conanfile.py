@@ -28,6 +28,7 @@ class DNETConan(ConanFile):
     def requirements(self):
         self.requires("dlog/[>=2.6.0]@daixian/stable")
         self.requires("xuexuesharp/[>=0.0.16]@daixian/stable")
+        self.requires("xuexuejson/[>1.1.0]@daixian/stable")
 
     def _configure_cmake(self):
         '''

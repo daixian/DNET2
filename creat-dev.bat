@@ -5,4 +5,4 @@ REM python ./tools/DownloadLib.py -d "C:/dxlib/download" -l "C:/dxlib/lib" "conc
 
 mkdir build
 cd build
-conan install .. -s compiler.runtime=MD -s arch=x86_64 -s build_type=Release --build missing
+conan install ../test_package -s compiler.runtime=MD -s arch=x86_64 -s build_type=Release --build missing
