@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <string>
 #include <vector>
@@ -7,7 +7,7 @@
 namespace dxlib {
 
 /**
- * ´ú±íÒ»¸öĞ­ÒéµÄ´ò°ü·½·¨.
+ * ä»£è¡¨ä¸€ä¸ªåè®®çš„æ‰“åŒ…æ–¹æ³•.
  *
  * @author daixian
  * @date 2020/12/21
@@ -55,7 +55,7 @@ class IPacket
      * @param  buffer    The buffer.
      * @param  bufferLen Length of the buffer.
      *
-     * @returns Èç¹û³É¹¦,·µ»Ø´ò°üºóµÄÊı¾İ³¤¶È.
+     * @returns å¦‚æœæˆåŠŸ,è¿”å›æ‰“åŒ…åçš„æ•°æ®é•¿åº¦.
      */
     virtual int Pack(const char* data, int len, char* buffer, int bufferLen) = 0;
 
@@ -69,7 +69,7 @@ class IPacket
      * @param       count    Number of.
      * @param [out] result   The result.
      *
-     * @returns Èç¹û½âÎöµ½ÁËÍêÕûÊı¾İ°ü,·µ»Ø½âÎöµ½µÄ½á¹û¸öÊı.
+     * @returns å¦‚æœè§£æåˆ°äº†å®Œæ•´æ•°æ®åŒ…,è¿”å›è§£æåˆ°çš„ç»“æœä¸ªæ•°.
      */
     virtual int Unpack(const char* receBuff, int count, std::vector<std::vector<char>>& result) = 0;
 
@@ -83,17 +83,17 @@ class IPacket
      * @param       count    Number of.
      * @param [out] result   The result.
      *
-     * @returns Èç¹û½âÎöµ½ÁËÍêÕûÊı¾İ°ü,·µ»Ø½âÎöµ½µÄ½á¹û¸öÊı.
+     * @returns å¦‚æœè§£æåˆ°äº†å®Œæ•´æ•°æ®åŒ…,è¿”å›è§£æåˆ°çš„ç»“æœä¸ªæ•°.
      */
     virtual int Unpack(const char* receBuff, int count, std::vector<std::string>& result) = 0;
 
     /**
-     * µ±Ç°ÊÇ·ñÓĞ²»ÍêÕûµÄ½âÎöµÄÊı¾İ»¹ÔÚ»º´æÀïÃæ.
+     * å½“å‰æ˜¯å¦æœ‰ä¸å®Œæ•´çš„è§£æçš„æ•°æ®è¿˜åœ¨ç¼“å­˜é‡Œé¢.
      *
      * @author daixian
      * @date 2020/12/21
      *
-     * @returns µ±Ç°ËùÓĞÊı¾İ¶¼¸ÕºÃ´¦ÀíÍêÁËÔò·µ»Øtrue.
+     * @returns å½“å‰æ‰€æœ‰æ•°æ®éƒ½åˆšå¥½å¤„ç†å®Œäº†åˆ™è¿”å›true.
      */
     virtual bool isUnpackCached() = 0;
 

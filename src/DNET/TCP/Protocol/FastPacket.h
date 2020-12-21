@@ -1,11 +1,11 @@
-#pragma once
+ï»¿#pragma once
 
 #include "IPacket.h"
 
 namespace dxlib {
 
 /**
- * ÔÚÏûÏ¢µÄÍ·Ê¹ÓÃÒ»¸öintÀ´±ê¼ÇÏûÏ¢³¤¶È.
+ * åœ¨æ¶ˆæ¯çš„å¤´ä½¿ç”¨ä¸€ä¸ªintæ¥æ ‡è®°æ¶ˆæ¯é•¿åº¦.
  *
  * @author daixian
  * @date 2020/12/21
@@ -30,12 +30,12 @@ class FastPacket : public IPacket
     virtual int Pack(const char* data, int len, std::vector<char>& result) override
     {
         result.resize(1 + 4 + (size_t)len);
-        //Ğ­ÒéÍ·
+        //åè®®å¤´
         result[0] = 'x';
-        //Ğ­Òé³¤
+        //åè®®é•¿
         int* ptr = (int*)(&result[1]);
         *ptr = len;
-        //Êı¾İÄÚÈİ
+        //æ•°æ®å†…å®¹
         memcpy(&result[5], data, len);
         return result.size();
     }
@@ -54,12 +54,12 @@ class FastPacket : public IPacket
     virtual int Pack(const char* data, int len, std::string& result) override
     {
         result.resize(1 + 4 + (size_t)len);
-        //Ğ­ÒéÍ·
+        //åè®®å¤´
         result[0] = 'x';
-        //Ğ­Òé³¤
+        //åè®®é•¿
         int* ptr = (int*)(&result[1]);
         *ptr = len;
-        //Êı¾İÄÚÈİ
+        //æ•°æ®å†…å®¹
         memcpy(&result[5], data, len);
         return result.size();
     }
@@ -75,7 +75,7 @@ class FastPacket : public IPacket
      * @param  buffer    The buffer.
      * @param  bufferLen Length of the buffer.
      *
-     * @returns Èç¹û³É¹¦,·µ»Ø´ò°üºóµÄÊı¾İ³¤¶È,²úÉú´íÎóÔò·µ»Ø¸ºÖµ.
+     * @returns å¦‚æœæˆåŠŸ,è¿”å›æ‰“åŒ…åçš„æ•°æ®é•¿åº¦,äº§ç”Ÿé”™è¯¯åˆ™è¿”å›è´Ÿå€¼.
      */
     virtual int Pack(const char* data, int len, char* buffer, int bufferLen) override
     {
@@ -87,13 +87,13 @@ class FastPacket : public IPacket
         buffer[0] = 'x';
         int* ptr = (int*)(&buffer[1]);
         *ptr = len;
-        //Êı¾İÄÚÈİ
+        //æ•°æ®å†…å®¹
         memcpy(&buffer[5], data, len);
         return packLen;
     }
 
     /**
-     * Unpacks.ËüÊÇÁ÷Ê½µÄ,½«½ÓÊÕµ½µÄÊı¾İÒÀ´ÎµÄ´«½øÀ´¾Í¿ÉÒÔÁË.
+     * Unpacks.å®ƒæ˜¯æµå¼çš„,å°†æ¥æ”¶åˆ°çš„æ•°æ®ä¾æ¬¡çš„ä¼ è¿›æ¥å°±å¯ä»¥äº†.
      *
      * @author daixian
      * @date 2020/12/21
@@ -102,7 +102,7 @@ class FastPacket : public IPacket
      * @param       count    Number of.
      * @param [out] result   The result.
      *
-     * @returns Èç¹û½âÎöµ½ÁËÍêÕûÊı¾İ°ü,·µ»Ø½âÎöµ½µÄ½á¹û¸öÊı.
+     * @returns å¦‚æœè§£æåˆ°äº†å®Œæ•´æ•°æ®åŒ…,è¿”å›è§£æåˆ°çš„ç»“æœä¸ªæ•°.
      */
     virtual int Unpack(const char* receBuff, int count, std::vector<std::vector<char>>& result) override
     {
@@ -116,56 +116,56 @@ class FastPacket : public IPacket
                         isHasHead = true;
                         _unpackLenBuff.clear();
                         _unpackDataBuff.clear();
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼¿´³¤¶È
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹çœ‹é•¿åº¦
                         break;
                     }
                     else {
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹
                     }
                 }
             }
 
-            //Èç¹ûÕû¸ö±éÀú¶¼ÕÒ²»µ½Ò»¸öĞ­ÒéÍ·
+            //å¦‚æœæ•´ä¸ªéå†éƒ½æ‰¾ä¸åˆ°ä¸€ä¸ªåè®®å¤´
             if (!isHasHead) {
                 return 0;
             }
 
-            //Èç¹û»¹Ã»ÓĞ¶ÁÈ¡Íê³¤¶È
+            //å¦‚æœè¿˜æ²¡æœ‰è¯»å–å®Œé•¿åº¦
             if (_unpackLenBuff.size() < 4) {
                 for (int i = curIndex; i < count; i++) {
                     _unpackLenBuff.push_back(receBuff[i]);
                     if (_unpackLenBuff.size() == 4) {
-                        //µ±Ç°ĞèÒªÈ¥¼ì²ì½á¹ûÁË
+                        //å½“å‰éœ€è¦å»æ£€å¯Ÿç»“æœäº†
                         int* ptr = (int*)(&_unpackLenBuff[0]);
                         curMsgLen = *ptr;
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼¿½±´Êı¾İ
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹æ‹·è´æ•°æ®
                         break;
                     }
                     else {
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹
                     }
                 }
             }
 
-            //Èç¹û³¤¶ÈÒÑ¾­ÓĞÁË
+            //å¦‚æœé•¿åº¦å·²ç»æœ‰äº†
             if (_unpackLenBuff.size() == 4) {
                 for (int i = curIndex; i < count; i++) {
                     _unpackDataBuff.push_back(receBuff[i]);
                     if (_unpackDataBuff.size() == curMsgLen) {
-                        //µ±Ç°½âÎöµ½ÁËÒ»ÌõÍêÕûÏûÏ¢
+                        //å½“å‰è§£æåˆ°äº†ä¸€æ¡å®Œæ•´æ¶ˆæ¯
                         result.push_back(_unpackDataBuff);
 
-                        //Çå¿Õ¼ÇÂ¼×´Ì¬
+                        //æ¸…ç©ºè®°å½•çŠ¶æ€
                         isHasHead = false;
                         _unpackLenBuff.clear();
                         curMsgLen = 0;
                         _unpackDataBuff.clear();
 
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹
                         break;
                     }
                     else {
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹
                     }
                 }
             }
@@ -184,7 +184,7 @@ class FastPacket : public IPacket
      * @param       count    Number of.
      * @param [out] result   The result.
      *
-     * @returns Èç¹û½âÎöµ½ÁËÍêÕûÊı¾İ°ü,·µ»Ø½âÎöµ½µÄ½á¹û¸öÊı.
+     * @returns å¦‚æœè§£æåˆ°äº†å®Œæ•´æ•°æ®åŒ…,è¿”å›è§£æåˆ°çš„ç»“æœä¸ªæ•°.
      */
     virtual int Unpack(const char* receBuff, int count, std::vector<std::string>& result) override
     {
@@ -198,56 +198,56 @@ class FastPacket : public IPacket
                         isHasHead = true;
                         _unpackLenBuff.clear();
                         _unpackDataBuff.clear();
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼¿´³¤¶È
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹çœ‹é•¿åº¦
                         break;
                     }
                     else {
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹
                     }
                 }
             }
 
-            //Èç¹ûÕû¸ö±éÀú¶¼ÕÒ²»µ½Ò»¸öĞ­ÒéÍ·
+            //å¦‚æœæ•´ä¸ªéå†éƒ½æ‰¾ä¸åˆ°ä¸€ä¸ªåè®®å¤´
             if (!isHasHead) {
                 return 0;
             }
 
-            //Èç¹û»¹Ã»ÓĞ¶ÁÈ¡Íê³¤¶È
+            //å¦‚æœè¿˜æ²¡æœ‰è¯»å–å®Œé•¿åº¦
             if (_unpackLenBuff.size() < 4) {
                 for (int i = curIndex; i < count; i++) {
                     _unpackLenBuff.push_back(receBuff[i]);
                     if (_unpackLenBuff.size() == 4) {
-                        //µ±Ç°ĞèÒªÈ¥¼ì²ì½á¹ûÁË
+                        //å½“å‰éœ€è¦å»æ£€å¯Ÿç»“æœäº†
                         int* ptr = (int*)(&_unpackLenBuff[0]);
                         curMsgLen = *ptr;
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼¿½±´Êı¾İ
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹æ‹·è´æ•°æ®
                         break;
                     }
                     else {
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹
                     }
                 }
             }
 
-            //Èç¹û³¤¶ÈÒÑ¾­ÓĞÁË
+            //å¦‚æœé•¿åº¦å·²ç»æœ‰äº†
             if (_unpackLenBuff.size() == 4) {
                 for (int i = curIndex; i < count; i++) {
                     _unpackDataBuff.push_back(receBuff[i]);
                     if (_unpackDataBuff.size() == curMsgLen) {
-                        //µ±Ç°½âÎöµ½ÁËÒ»ÌõÍêÕûÏûÏ¢
+                        //å½“å‰è§£æåˆ°äº†ä¸€æ¡å®Œæ•´æ¶ˆæ¯
                         result.push_back(std::string(_unpackDataBuff.data(), _unpackDataBuff.size()));
 
-                        //Çå¿Õ¼ÇÂ¼×´Ì¬
+                        //æ¸…ç©ºè®°å½•çŠ¶æ€
                         isHasHead = false;
                         _unpackLenBuff.clear();
                         curMsgLen = 0;
                         _unpackDataBuff.clear();
 
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹
                         break;
                     }
                     else {
-                        curIndex = i + 1; //´ÓÏÂÒ»¸öÎ»ÖÃ¿ªÊ¼
+                        curIndex = i + 1; //ä»ä¸‹ä¸€ä¸ªä½ç½®å¼€å§‹
                     }
                 }
             }
@@ -256,12 +256,12 @@ class FastPacket : public IPacket
     }
 
     /**
-     * µ±Ç°ÊÇ·ñÓĞ²»ÍêÕûµÄ½âÎöµÄÊı¾İ»¹ÔÚ»º´æÀïÃæ.
+     * å½“å‰æ˜¯å¦æœ‰ä¸å®Œæ•´çš„è§£æçš„æ•°æ®è¿˜åœ¨ç¼“å­˜é‡Œé¢.
      *
      * @author daixian
      * @date 2020/12/21
      *
-     * @returns µ±Ç°ËùÓĞÊı¾İ¶¼¸ÕºÃ´¦ÀíÍêÁËÔò·µ»Øtrue.
+     * @returns å½“å‰æ‰€æœ‰æ•°æ®éƒ½åˆšå¥½å¤„ç†å®Œäº†åˆ™è¿”å›true.
      */
     virtual bool isUnpackCached() override
     {
@@ -271,13 +271,13 @@ class FastPacket : public IPacket
   private:
     bool isHasHead = false;
 
-    // À´»º´æunpackÎ´Íê³ÉµÄ'Êı¾İ³¤¶È'×Ö¶ÎµÄ»º´æ,Ëü×î¶àÓ¦¸ÃÖ»ÓĞ4¸ö³¤¶È
+    // æ¥ç¼“å­˜unpackæœªå®Œæˆçš„'æ•°æ®é•¿åº¦'å­—æ®µçš„ç¼“å­˜,å®ƒæœ€å¤šåº”è¯¥åªæœ‰4ä¸ªé•¿åº¦
     std::vector<char> _unpackLenBuff;
 
-    // ËüÄÜµÃ³öµÄÊı¾İ³¤¶È
+    // å®ƒèƒ½å¾—å‡ºçš„æ•°æ®é•¿åº¦
     int curMsgLen = 0;
 
-    // ÓÃÀ´»º´æunpackÎ´Íê³ÉµÄÊı¾İµÄbuff
+    // ç”¨æ¥ç¼“å­˜unpackæœªå®Œæˆçš„æ•°æ®çš„buff
     std::vector<char> _unpackDataBuff;
 };
 
