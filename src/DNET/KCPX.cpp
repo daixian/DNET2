@@ -4,6 +4,8 @@
 
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/MulticastSocket.h"
+#include "Poco/Net/ServerSocket.h"
+
 #include "Poco/Task.h"
 #include "Poco/TaskManager.h"
 #include "Poco/TaskNotification.h"
@@ -48,7 +50,7 @@ class KCPXUser
     // 远程对象名字
     std::string name = "unnamed";
 
-    // 自己的socket,用于发送函数
+    // 自己的UDPSocket,用于发送函数
     Poco::Net::DatagramSocket* socket = nullptr;
 
     // 要发送过去的地址(这里还是用对象算了)
@@ -114,6 +116,12 @@ class KCPX::Impl
     // 自己的本地socket
     Poco::Net::DatagramSocket* socket = nullptr;
 
+    // TCP的socket用于服务器监听握手信息端口和UDP一致
+    Poco::Net::ServerSocket* tcpServer = nullptr;
+
+    // TCP的连接用于客户端连接tcp服务器
+    Poco::Net::StreamSocket* tcpClient = nullptr;
+
     //socket使用的buff ,最好大于1400吧
     char* receBuf = new char[1024 * 4];
 
@@ -141,10 +149,12 @@ class KCPX::Impl
         try {
             this->name = name;
             Poco::Net::SocketAddress sAddr(Poco::Net::AddressFamily::IPv4, host, port);
-            socket = new Poco::Net::DatagramSocket(sAddr); //使用一个端口开始一个接收
 
-            //它可以设置是否是阻塞
-            socket->setBlocking(false);
+            socket = new Poco::Net::DatagramSocket(sAddr); //使用一个端口开始一个UDP接收
+            socket->setBlocking(false);                    //它可以设置是否是阻塞
+
+            tcpServer = new Poco::Net::ServerSocket(sAddr);
+            tcpServer->setBlocking(false);
 
             KCPXUser* kcpUser = new KCPXUser(socket, 0);
             kcpAccept = ikcp_create(0, kcpUser);
@@ -185,6 +195,19 @@ class KCPX::Impl
             isFind = true;
         }
         return conv;
+    }
+
+    /**
+     * Determines if we can TCP accept receive
+     *
+     * @author daixian
+     * @date 2020/12/21
+     *
+     * @returns True if it succeeds, false if it fails.
+     */
+    bool tcpAcceptReceive()
+    {
+        Poco::Net::StreamSocket streamSocket = tcpServer->acceptConnection();//这个函数是阻塞的
     }
 
     /**
