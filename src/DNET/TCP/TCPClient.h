@@ -49,17 +49,39 @@ class TCPClient
     int Connect(const std::string& host, int port);
 
     /**
-     * 非阻塞的发送一段数据.正常发送成功返回0.
+     * 非阻塞的发送一段数据.返回发送的字节数(打包后的)，可能是少于指定的字节数。某些套接字实现也可能返回负数,表示特定条件的值。
      *
      * @author daixian
      * @date 2020/5/12
      *
-     * @param  data  要发送的数据.
-     * @param  len   数据长度.
+     * @param  data 要发送的数据.
+     * @param  len  数据长度.
      *
-     * @returns 返回发送成功的长度.
+     * @returns 返回发送成功的长度(打包后的).
      */
     int Send(const char* data, int len);
+
+    /**
+     * 可读取(接收)的数据数.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns An int.
+     */
+    int Available();
+
+    /**
+     * 等待,一直等到可接收有数据.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @param  waitCount (Optional) 等待的次数,一次100ms吧.
+     *
+     * @returns 等于Available()函数的返回值.
+     */
+    int WaitAvailable(int waitCount = 50);
 
     /**
      * Receives the given msgs

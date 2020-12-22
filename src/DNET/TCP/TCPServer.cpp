@@ -171,6 +171,27 @@ class TCPServer::Impl
         return client->Send(data, len); //发送打包后的数据
     }
 
+    //客户端接收查询
+    int Available(int tcpID)
+    {
+        TCPClient* client = clientManager.GetClient(tcpID);
+        if (client == nullptr) { //客户端不存在
+            return -1;
+        }
+
+        return client->Available();
+    }
+
+    int WaitAvailable(int tcpID, int waitCount)
+    {
+        TCPClient* client = clientManager.GetClient(tcpID);
+        if (client == nullptr) { //客户端不存在
+            return -1;
+        }
+
+        return client->WaitAvailable(waitCount);
+    }
+
     int Receive(std::map<int, std::vector<std::vector<char>>>& msgs)
     {
         msgs.clear();
@@ -234,6 +255,11 @@ Poco::BasicEvent<TCPEventAccept>& TCPServer::EventAccept()
     return _impl->eventAccept;
 }
 
+int TCPServer::Available(int tcpID)
+{
+    return _impl->Available(tcpID);
+}
+
 int TCPServer::Receive(std::map<int, std::vector<std::vector<char>>>& msgs)
 {
     return _impl->Receive(msgs);
@@ -244,4 +270,8 @@ int TCPServer::Receive(std::map<int, std::vector<std::string>>& msgs)
     return _impl->Receive(msgs);
 }
 
+int TCPServer::WaitAvailable(int tcpID, int waitCount)
+{
+    return _impl->WaitAvailable(tcpID, waitCount);
+}
 } // namespace dxlib

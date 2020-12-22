@@ -78,6 +78,28 @@ class TCPServer
     int Send(int tcpID, const char* data, int len);
 
     /**
+     * 可读取(接收)的数据数.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns An int.
+     */
+    int Available(int tcpID);
+
+    /**
+     * 等待,一直等到可接收有数据.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @param  waitCount (Optional) 等待的次数,一次100ms吧.
+     *
+     * @returns 等于Available()函数的返回值.
+     */
+    int WaitAvailable(int tcpID, int waitCount = 50);
+
+    /**
      * 尝试非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
      *
      * @author daixian

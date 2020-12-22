@@ -14,6 +14,8 @@
 #include "Protocol/FastPacket.h"
 #include "dlog/dlog.h"
 
+#include <thread>
+
 namespace dxlib {
 
 class TCPClient::Impl
@@ -141,8 +143,17 @@ class TCPClient::Impl
         std::vector<char> package;
         packet.Pack(data, len, package);
 
-        int res = socket.sendBytes(package.data(), (int)package.size()); //发送打包后的数据
-        return res;
+        int sendCount = 0;
+        for (size_t i = 0; i < 10; i++) {
+            int res = socket.sendBytes(package.data() + sendCount, (int)package.size() - sendCount); //发送打包后的数据
+            sendCount += res;
+            if (sendCount == (int)package.size()) {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100)); //如果不能完整发送那么就休息100ms
+        }
+
+        return sendCount;
     }
 
     /**
@@ -176,6 +187,15 @@ class TCPClient::Impl
         }
 
         return (int)msgs.size();
+    }
+
+    int Available()
+    {
+        if (!isConnected) {
+            return -1;
+        }
+
+        return socket.available();
     }
 
     /**
@@ -271,4 +291,24 @@ int TCPClient::Receive(std::vector<std::string>& msgs)
     return _impl->Receive(msgs);
 }
 
+int TCPClient::Available()
+{
+    return _impl->Available();
+}
+
+int TCPClient::WaitAvailable(int waitCount)
+{
+    for (size_t i = 0; i < waitCount; i++) {
+        int res = _impl->Available();
+        if (res < 0) { //这里应该是错误,就不用等了
+            return res;
+        }
+        if (_impl->Available() > 0) {
+            return res; //如果等到了已经有了接收数据那么就直接返回.
+        }
+        //等待100ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    return 0;
+}
 } // namespace dxlib
