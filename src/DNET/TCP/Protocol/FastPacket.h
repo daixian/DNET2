@@ -37,7 +37,7 @@ class FastPacket : public IPacket
         *ptr = len;
         //数据内容
         memcpy(&result[5], data, len);
-        return result.size();
+        return (int)result.size();
     }
 
     /**
@@ -61,7 +61,7 @@ class FastPacket : public IPacket
         *ptr = len;
         //数据内容
         memcpy(&result[5], data, len);
-        return result.size();
+        return (int)result.size();
     }
 
     /**
@@ -106,7 +106,7 @@ class FastPacket : public IPacket
      */
     virtual int Unpack(const char* receBuff, int count, std::vector<std::vector<char>>& result) override
     {
-        result.clear();
+        //result.clear();
 
         int curIndex = 0;
         while (curIndex < count) {
@@ -170,7 +170,7 @@ class FastPacket : public IPacket
                 }
             }
         }
-        return result.size();
+        return (int)result.size();
     }
 
     /**
@@ -188,7 +188,7 @@ class FastPacket : public IPacket
      */
     virtual int Unpack(const char* receBuff, int count, std::vector<std::string>& result) override
     {
-        result.clear();
+        //result.clear();
 
         int curIndex = 0;
         while (curIndex < count) {
@@ -252,7 +252,7 @@ class FastPacket : public IPacket
                 }
             }
         }
-        return result.size();
+        return (int)result.size();
     }
 
     /**

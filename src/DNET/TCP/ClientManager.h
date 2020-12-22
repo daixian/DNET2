@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "TCPClient.h"
+
 #include "Poco/Net/StreamSocket.h"
 
 namespace dxlib {
@@ -14,10 +16,10 @@ class ClientManager
     ~ClientManager() {}
 
     // 所有连接了的客户端.
-    std::map<int, Poco::Net::StreamSocket> mClients;
+    std::map<int, TCPClient> mClients;
 
     /**
-     * 添加一个客户端进来记录.
+     * 服务器添加一个客户端进来记录.
      *
      * @author daixian
      * @date 2020/12/21
@@ -28,7 +30,7 @@ class ClientManager
      */
     int AddClient(Poco::Net::StreamSocket& client)
     {
-        mClients[_clientCount] = client;
+        TCPClient::CreateWithServer(_clientCount, &client, mClients[_clientCount]);
         _clientCount++; //永远递增
         return _clientCount - 1;
     }
@@ -43,7 +45,7 @@ class ClientManager
      *
      * @returns Null if it fails, else the client.
      */
-    Poco::Net::StreamSocket* GetClient(int tcpID)
+    TCPClient* GetClient(int tcpID)
     {
         if (mClients.find(tcpID) != mClients.end()) {
             return &mClients[tcpID];
