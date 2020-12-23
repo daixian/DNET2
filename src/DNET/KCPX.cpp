@@ -21,6 +21,9 @@
 #include <regex>
 #include "Accept.h"
 
+#include "TCP/TCPServer.h"
+#include "TCP/TCPClient.h"
+
 namespace dxlib {
 
 //TODO: 可以让上层通过检测 ikcp_waitsnd 函数来判断还有多少包没有发出去，灵活抉择是否向 snd_queue 缓存追加数据包还是其他。
@@ -56,7 +59,7 @@ class KCPXUser
     // 要发送过去的地址(这里还是用对象算了)
     Poco::Net::SocketAddress remote;
 
-    // 这个远端之间的认证信息
+    // 这个远端之间的认证信息(每个kcp连接之间都有自己的认证随机Key)
     Accept accept;
 
     // 接收数据buffer
@@ -97,10 +100,31 @@ class KCPX::Impl
     Impl() {}
     ~Impl()
     {
-        try {
-            socket->close();
+        if (tcpServer != nullptr) {
+            try {
+                tcpServer->Close();
+            }
+            catch (const std::exception&) {
+            }
+            delete tcpServer;
         }
-        catch (const std::exception&) {
+
+        if (tcpClient != nullptr) {
+            try {
+                tcpClient->Close();
+            }
+            catch (const std::exception&) {
+            }
+            delete tcpClient;
+        }
+
+        if (socket != nullptr) {
+            try {
+                socket->close();
+            }
+            catch (const std::exception&) {
+            }
+            delete socket;
         }
 
         delete receBuf;
@@ -113,23 +137,26 @@ class KCPX::Impl
     // 自己的名字
     std::string name;
 
+    // kcp使用的UDP端口
+    int port = 0;
+
     // 自己的本地socket
     Poco::Net::DatagramSocket* socket = nullptr;
 
     // TCP的socket用于服务器监听握手信息端口和UDP一致
-    Poco::Net::ServerSocket* tcpServer = nullptr;
+    TCPServer* tcpServer = nullptr;
 
     // TCP的连接用于客户端连接tcp服务器
-    Poco::Net::StreamSocket* tcpClient = nullptr;
+    TCPClient* tcpClient = nullptr;
 
     //socket使用的buff ,最好大于1400吧
     char* receBuf = new char[1024 * 4];
 
-    // 用于监听握手用的kcp对象,id号为0
-    ikcpcb* kcpAccept = nullptr;
+    //// 用于监听握手用的kcp对象,id号为0
+    //ikcpcb* kcpAccept = nullptr;
 
     //是否是等待连接状态
-    bool isWaitAcceptReply = false;
+    Accept* clientTempAccept = nullptr;
 
     // 远程对象列表
     std::map<int, ikcpcb*> remotes;
@@ -148,20 +175,23 @@ class KCPX::Impl
     {
         try {
             this->name = name;
+            this->port = port;
             Poco::Net::SocketAddress sAddr(Poco::Net::AddressFamily::IPv4, host, port);
 
             socket = new Poco::Net::DatagramSocket(sAddr); //使用一个端口开始一个UDP接收
             socket->setBlocking(false);                    //它可以设置是否是阻塞
 
-            tcpServer = new Poco::Net::ServerSocket(sAddr);
-            tcpServer->setBlocking(false);
+            //启动TCP监听,等待客户端握手连入
+            tcpServer = new TCPServer(name, host, port);
+            tcpServer->Start();
+            tcpServer->WaitStarted();
 
-            KCPXUser* kcpUser = new KCPXUser(socket, 0);
-            kcpAccept = ikcp_create(0, kcpUser);
-            // 设置回调函数
-            kcpAccept->output = kcpx_udp_output;
+            //KCPXUser* kcpUser = new KCPXUser(socket, 0);
+            //kcpAccept = ikcp_create(0, kcpUser);
+            //// 设置回调函数
+            //kcpAccept->output = kcpx_udp_output;
 
-            ikcp_nodelay(kcpAccept, 1, 10, 2, 1);
+            //ikcp_nodelay(kcpAccept, 1, 10, 2, 1);
             //kcpAccept->rx_minrto = 10;
             //kcpAccept->fastresend = 1;
         }
@@ -197,118 +227,93 @@ class KCPX::Impl
         return conv;
     }
 
-    /**
-     * Determines if we can TCP accept receive
-     *
-     * @author daixian
-     * @date 2020/12/21
-     *
-     * @returns True if it succeeds, false if it fails.
-     */
-    bool tcpAcceptReceive()
+    // TCP的服务器端接收认证的处理
+    void TCPServerAcceptReceive()
     {
-        Poco::Net::StreamSocket streamSocket = tcpServer->acceptConnection();//这个函数是阻塞的
-    }
-
-    /**
-     * KcpAccept的接收逻辑.
-     *
-     * @author daixian
-     * @date 2020/12/19
-     *
-     * @param [in,out] buffer If non-null, the buffer.
-     * @param          len    The length.
-     * @param          remote The remote.
-     *
-     * @returns True if it succeeds, false if it fails.
-     */
-    bool kcpAcceptReceive(char* buffer, int len, const Poco::Net::SocketAddress& remote)
-    {
-        int rece, result;
-        //尝试给kcpAccept看看是否是它的信道的数据
-        rece = ikcp_input(kcpAccept, buffer, len);
-        if (rece == -1) {
-            //conv不对应
-            return false;
+        if (tcpServer == nullptr) {
+            return;
         }
-        ikcp_flush(kcpAccept); //尝试暴力flush
-
-        KCPXUser* acceptUser = (KCPXUser*)kcpAccept->user;
-        while (rece >= 0) {
-            rece = ikcp_recv(kcpAccept, acceptUser->buffer.data(), acceptUser->buffer.size());
-            if (rece == -3) {
-                LogE("KCPX.kcpAcceptReceive():提供的buffer过小len=%d,peeksize=%d,kcpAccept表示不能接收!", len, ikcp_peeksize(kcpAccept));
-                return true; //这里不应该buffer不够
-            }
-            else if (rece > 0) {
-                LogI("KCPX.kcpAcceptReceive():kcpAccept接收到了认证数据数据,长度%d", rece);
-
-                if (isWaitAcceptReply) {
-                    //当前是等待服务器端的消息响应
-                    if (!acceptUser->accept.isVerified()) {
-                        LogI("KCPX.SendAccept():当前是等待认证的状态,检察远程回复的Accept...");
-                        std::string remoteName;
-                        int conv;
-                        acceptUser->accept.VerifyReplyAccept(std::string(acceptUser->buffer.data(), rece), remoteName, conv);
-                        poco_assert(conv > 0);
-                        LogI("KCPX.SendAccept():远程通知来的conv=%d,认证成功!", conv);
-                        KCPXUser* kcpUser = new KCPXUser(socket, conv);
-                        kcpUser->name = remoteName;
-                        kcpUser->remote = remote;
-                        kcpUser->accept = acceptUser->accept;
-                        ikcpcb* kcp = ikcp_create(conv, kcpUser);
-                        // 设置回调函数
-                        kcp->output = kcpx_udp_output;
-
-                        ikcp_nodelay(kcp, 1, 10, 2, 1);
-                        //kcp->rx_minrto = 10;
-                        //kcp->fastresend = 1;
-                        remotes[conv] = kcp; //添加这个新客户端
-
-                        isWaitAcceptReply = false;
-                        acceptUser->name = "unnamed"; //客户端这边不再设置远程名是wait
-                    }
-                }
-                else {
-                    //user->buffer[rece]='\0';
-                    std::string acceptStr(acceptUser->buffer.data(), rece);
-                    int conv = GetConv();
-                    KCPXUser* kcpUser = new KCPXUser(socket, conv);                                  //准备创建新的客户端用户
-                    std::string replyStr = kcpUser->accept.ReplyAcceptString(acceptStr, name, conv); //使用这个新的客户端用户做accept
-                    if (replyStr.empty()) {
-                        // 非法的认证信息
-                        LogE("KCPX.kcpAcceptReceive():非法的认证信息!");
-                        delete kcpUser;
-                    }
-                    else {
-                        // 有效的认证信息,自己是服务器端
-                        acceptUser->remote = remote;
-                        kcpUser->remote = remote;
-                        //kcpUser->accept = acceptUser->accept;
-                        kcpUser->name = kcpUser->accept.nameC();
-
-                        result = ikcp_send(kcpAccept, replyStr.c_str(), replyStr.size()); //从0号通道回发
-                        poco_assert(result == 0);
-                        ikcp_flush(kcpAccept); //尝试暴力flush
-
-                        ikcpcb* kcp = ikcp_create(conv, kcpUser);
-                        // 设置回调函数
-                        kcp->output = kcpx_udp_output;
-
-                        ikcp_nodelay(kcp, 1, 10, 2, 1);
-                        //kcp->rx_minrto = 10;
-                        //kcp->fastresend = 1;
-                        remotes[conv] = kcp; //添加这个新客户端
-                        LogI("KCPX.kcpAcceptReceive():添加了一个新客户端,分配conv=%d", conv);
-                    }
-                }
+        std::map<int, std::vector<std::string>> msgs;
+        tcpServer->Receive(msgs);
+        for (auto& kvp : msgs) {
+            int tcpID = kvp.first;
+            std::string& acceptStr = kvp.second[0]; //只处理第一条
+            int conv = GetConv();
+            KCPXUser* kcpUser = new KCPXUser(socket, conv);                                              //准备创建新的客户端用户
+            std::string replyStr = kcpUser->accept.ReplyAcceptString(acceptStr, name, conv, this->port); //使用这个新的客户端用户做accept
+            if (replyStr.empty()) {
+                // replyStr为空,非法的认证信息
+                LogE("KCPX.kcpAcceptReceive():非法的认证信息!");
+                delete kcpUser;
             }
             else {
-                // 没有接收到完整数据,不应该出现咋
-                LogI("KCPX.kcpAcceptReceive():当前返回值rece=%d,退出接收", rece);
+                // replyStr有内容,有效的认证信息,自己是服务器端
+                Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpServer->GetClientSocket(tcpID);
+                kcpUser->remote = Poco::Net::SocketAddress(tcs->peerAddress().host(), kcpUser->accept.portC()); //绑定客户端的端口
+                kcpUser->name = kcpUser->accept.nameC();
+                tcpServer->Send(tcpID, replyStr.c_str(), replyStr.size());
+
+                ikcpcb* kcp = ikcp_create(conv, kcpUser);
+                // 设置回调函数
+                kcp->output = kcpx_udp_output;
+
+                ikcp_nodelay(kcp, 1, 10, 2, 1);
+                //kcp->rx_minrto = 10;
+                //kcp->fastresend = 1;
+                remotes[conv] = kcp; //添加这个新客户端
+                LogI("KCPX.kcpAcceptReceive():添加了一个新客户端%s,Addr=%s:%d,分配conv=%d", kcpUser->name.c_str(),
+                     kcpUser->remote.host().toString().c_str(),
+                     kcpUser->remote.port(), conv);
             }
         }
-        return true;
+    }
+
+    void TCPClientAcceptReceive()
+    {
+        if (tcpClient == nullptr) {
+            return;
+        }
+        if (clientTempAccept == nullptr) {
+            return;
+        }
+
+        std::vector<std::string> msgs;
+        tcpClient->Receive(msgs);
+        if (msgs.size() > 0) {
+            std::string& acceptStr = msgs[0]; //只处理第一条(设计上应该只有一条)
+            std::string remoteName;
+            int conv;
+
+            clientTempAccept->VerifyReplyAccept(acceptStr.data(), remoteName, conv);
+            poco_assert(conv > 0);
+
+            Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
+
+            KCPXUser* kcpUser = new KCPXUser(socket, conv);
+            kcpUser->accept = *clientTempAccept;
+            kcpUser->name = remoteName;
+            kcpUser->remote = Poco::Net::SocketAddress(tcs->peerAddress().host(), clientTempAccept->portS()); //kcp的端口是固定的,和自己一样;
+
+            LogI("KCPX.SendAccept():%s(%s:%d)远程通知来的conv=%d,认证成功!", remoteName.c_str(),
+                 kcpUser->remote.host().toString().c_str(),
+                 kcpUser->remote.port(), conv);
+
+            ikcpcb* kcp = ikcp_create(conv, kcpUser);
+            // 设置回调函数
+            kcp->output = kcpx_udp_output;
+
+            ikcp_nodelay(kcp, 1, 10, 2, 1);
+            //kcp->rx_minrto = 10;
+            //kcp->fastresend = 1;
+            remotes[conv] = kcp; //添加这个新客户端
+
+            //认证完成,关闭认证相关的tcp客户端
+            delete clientTempAccept;
+            clientTempAccept = nullptr;
+            tcpClient->Close();
+            delete tcpClient;
+            tcpClient = nullptr;
+        }
     }
 
     /**
@@ -326,6 +331,11 @@ class KCPX::Impl
             LogE("KCPX.Receive():%s 还没有初始化,不能接收!", name);
             return -1;
         }
+
+        //执行一下TCP的
+        TCPServerAcceptReceive();
+        TCPClientAcceptReceive();
+
         vRece.clear();
         int rece;
         try {
@@ -336,32 +346,27 @@ class KCPX::Impl
                 LogD("KCPX.Receive():%s Socket接收到了数据,长度%d", name, n);
 
                 //进行Accept的判断
-                bool success = kcpAcceptReceive(receBuf, n, remote);
+                for (auto& kvp : remotes) {
+                    //尝试给kcp看看是否是它的信道的数据
+                    ikcpcb* kcp = kvp.second;
+                    rece = ikcp_input(kcp, receBuf, n);
+                    if (rece == -1) {
+                        //conv不对应
+                        continue;
+                    }
+                    ikcp_flush(kcp); //尝试暴力flush
 
-                //进行所有远程的判断
-                if (!success) {
-                    for (auto& kvp : remotes) {
-                        //尝试给kcp看看是否是它的信道的数据
-                        ikcpcb* kcp = kvp.second;
-                        rece = ikcp_input(kcp, receBuf, n);
-                        if (rece == -1) {
-                            //conv不对应
-                            continue;
+                    KCPXUser* user = (KCPXUser*)kcp->user;
+                    while (rece >= 0) {
+                        rece = ikcp_recv(kcp, user->buffer.data(), user->buffer.size());
+                        if (rece > 0) {
+                            user->receData.push_back(std::string(user->buffer.data(), rece)); //拷贝记录这一条收到的信息
                         }
-                        ikcp_flush(kcp); //尝试暴力flush
+                    }
 
-                        KCPXUser* user = (KCPXUser*)kcp->user;
-                        while (rece >= 0) {
-                            rece = ikcp_recv(kcp, user->buffer.data(), user->buffer.size());
-                            if (rece > 0) {
-                                user->receData.push_back(std::string(user->buffer.data(), rece)); //拷贝记录这一条收到的信息
-                            }
-                        }
-
-                        //如果这个user里面还有未处理的消息那么就添加进来吧
-                        if (user->receData.size() > 0) {
-                            vRece.push_back(user);
-                        }
+                    //如果这个user里面还有未处理的消息那么就添加进来吧
+                    if (user->receData.size() > 0) {
+                        vRece.push_back(user);
                     }
                 }
             }
@@ -376,6 +381,7 @@ class KCPX::Impl
         return vRece.size();
     }
 
+    // 查询等待发送的消息条数
     int WaitSendCount(int conv)
     {
         if (socket == nullptr) {
@@ -436,25 +442,26 @@ class KCPX::Impl
     int SendAccept(const std::string& host, int port)
     {
         if (socket == nullptr) {
-            LogE("KCPX.SendAccept():%s 还没有初始化,不能发送!", name);
+            LogE("KCPX.SendAccept():%s UDP还没有初始化,不能发送!", name);
             return -1;
         }
 
-        //int conv = GetConv();
-        KCPXUser* kcpUser = (KCPXUser*)kcpAccept->user;
-        kcpUser->name = "WaitAcceptServer";
-        kcpUser->remote = Poco::Net::SocketAddress(Poco::Net::AddressFamily::IPv4, host, port);
-        std::string acceptStr = kcpUser->accept.CreateAcceptString(name);
-
-        int res = ikcp_send(kcpAccept, acceptStr.c_str(), acceptStr.size());
-        if (res < 0) {
-            LogE("KCPX.SendAccept():发送异常返回%d", res);
+        if (tcpClient != nullptr) {
+            tcpClient->Close();
+            delete tcpClient;
         }
-        ikcp_flush(kcpAccept); //尝试暴力flush
-        LogI("KCPX.SendAccept():已发送Accept,之后等待Accept通过...");
-        isWaitAcceptReply = true; //自己进入等待Accept状态
 
-        return res;
+        if (clientTempAccept != nullptr) {
+            LogW("KCPX.SendAccept():当前存在Accept未完成的状态,这是一次强制重发.");
+            delete clientTempAccept;
+        }
+
+        tcpClient = new TCPClient();
+        tcpClient->Connect(host, port);
+        clientTempAccept = new Accept();
+
+        std::string acceptStr = clientTempAccept->CreateAcceptString(name, this->port);
+        return tcpClient->Send(acceptStr.c_str(), acceptStr.size());
     }
 
     /**
@@ -465,9 +472,6 @@ class KCPX::Impl
      */
     void Update()
     {
-        if (kcpAccept != nullptr)
-            ikcp_update(kcpAccept, iclock());
-
         for (auto& kvp : remotes) {
             ikcp_update(kvp.second, iclock());
         }
@@ -554,6 +558,16 @@ int KCPX::GetConvIDWithName(const std::string& name)
             return kvp.first;
     }
     return -1;
+}
+
+bool KCPX::isAccepting()
+{
+    if (_impl->clientTempAccept != nullptr) {
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 } // namespace dxlib

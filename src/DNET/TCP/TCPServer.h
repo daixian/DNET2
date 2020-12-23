@@ -54,6 +54,14 @@ class TCPServer
     bool IsStarted();
 
     /**
+     * 等待启动完成.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     */
+    void WaitStarted();
+
+    /**
      * 得到Accept的事件.
      *
      * @author daixian
@@ -122,6 +130,18 @@ class TCPServer
      * @returns 接收到的数据条数.
      */
     int Receive(std::map<int, std::vector<std::string>>& msgs);
+
+    /**
+     * 得到这个客户端的Poco的Socket指针(Poco::Net::StreamSocket).
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @param  tcpID Identifier for the TCP.
+     *
+     * @returns Poco::Net::StreamSocket类型的指针.
+     */
+    void* GetClientSocket(int tcpID);
 
   private:
     class Impl;

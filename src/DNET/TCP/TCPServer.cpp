@@ -108,8 +108,10 @@ class TCPServer::Impl
     // 服务器的名字.
     std::string name;
 
+    // 认证线程
     Poco::Thread* acceptThread = nullptr;
 
+    // 认证线程执行逻辑
     TCPAcceptRunnable* acceptRunnable = nullptr;
 
     // 用户连接进来了的事件.
@@ -137,6 +139,9 @@ class TCPServer::Impl
 
     void Close()
     {
+        //关闭所有客户端
+        clientManager.Clear();
+
         if (acceptRunnable != nullptr) {
             acceptRunnable->isRun = false;
             //acceptRunnable->socket->close();
@@ -245,6 +250,13 @@ bool TCPServer::IsStarted()
     return _impl->IsStarted();
 }
 
+void TCPServer::WaitStarted()
+{
+    while (!IsStarted()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
 int TCPServer::Send(int tcpID, const char* data, int len)
 {
     return _impl->Send(tcpID, data, len);
@@ -273,5 +285,14 @@ int TCPServer::Receive(std::map<int, std::vector<std::string>>& msgs)
 int TCPServer::WaitAvailable(int tcpID, int waitCount)
 {
     return _impl->WaitAvailable(tcpID, waitCount);
+}
+
+void* TCPServer::GetClientSocket(int tcpID)
+{
+    TCPClient* client = _impl->clientManager.GetClient(tcpID);
+    if (client != nullptr) {
+        return client->Socket();
+    }
+    return nullptr;
 }
 } // namespace dxlib

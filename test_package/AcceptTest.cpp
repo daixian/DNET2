@@ -13,10 +13,10 @@ TEST(Accept, CreateAcceptString)
     Accept accept;
 
     for (size_t i = 0; i < 1000; i++) {
-        std::string str = accept.CreateAcceptString("clinet");
+        std::string str = accept.CreateAcceptString("clinet", 8888);
 
         Accept acceptS;
-        std::string str2 = acceptS.ReplyAcceptString(str, "service", i);
+        std::string str2 = acceptS.ReplyAcceptString(str, "service", i, 9999);
 
         std::string serName;
         int conv = 0;
@@ -32,7 +32,7 @@ TEST(Accept, fail)
     Accept accept;
 
     for (size_t i = 0; i < 1000; i++) {
-        std::string str = accept.CreateAcceptString("clinet");
+        std::string str = accept.CreateAcceptString("clinet", 8888);
 
         Accept acceptS;
         std::string str2 = "32131";

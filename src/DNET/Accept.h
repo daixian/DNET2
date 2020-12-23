@@ -20,19 +20,20 @@ class Accept
     bool isEncrypt = false;
 
     /**
-     * 得到一个随机的认证字符串.它是一个json文本.
+     * 得到一个随机的认证字符串.它是一个json文本.(客户端调用)
      *
      * @author daixian
      * @date 2020/12/19
      *
-     * @param  name 客户端自己的名字.
+     * @param  name  客户端自己的名字.
+     * @param  protC The prot c.
      *
      * @returns The accept string.
      */
-    std::string CreateAcceptString(const std::string& name);
+    std::string CreateAcceptString(const std::string& name, int protC);
 
     /**
-     * 对一个随机的认证字符串进行回应.
+     * 对一个随机的认证字符串进行回应.(服务器端调用)
      *
      * @author daixian
      * @date 2020/12/19
@@ -40,10 +41,11 @@ class Accept
      * @param  acceptString 收到的认证字符串.
      * @param  name         自己的名字.
      * @param  conv         一个用于表示会话编号的整数.
+     * @param  protS        The prot s.
      *
      * @returns 如果认证失败返回空字符串.
      */
-    std::string ReplyAcceptString(const std::string& acceptString, const std::string& name, int conv);
+    std::string ReplyAcceptString(const std::string& acceptString, const std::string& name, int conv, int protS);
 
     /**
      * 校验服务端的返回,之后使用协商的conv进行连接.
@@ -88,6 +90,26 @@ class Accept
      * @returns A std::string.
      */
     std::string nameS();
+
+    /**
+     * Port c
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns An int.
+     */
+    int portC();
+
+    /**
+     * Port s
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns An int.
+     */
+    int portS();
 
   private:
     class Impl;

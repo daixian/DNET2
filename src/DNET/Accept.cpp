@@ -15,9 +15,13 @@ class AcceptDto : XUEXUE_JSON_OBJECT
 
     std::string keyS;
 
+    int portC = 0;
+
+    int portS = 0;
+
     int conv = 0;
 
-    XUEXUE_JSON_OBJECT_M5(nameC, nameS, keyC, keyS, conv)
+    XUEXUE_JSON_OBJECT_M7(nameC, nameS, keyC, keyS, portC, portS, conv)
 };
 
 class Accept::Impl
@@ -43,13 +47,14 @@ Accept::~Accept()
     delete _impl;
 }
 
-std::string Accept::CreateAcceptString(const std::string& name)
+std::string Accept::CreateAcceptString(const std::string& name, int portC)
 {
 
     Poco::Random rnd;
     rnd.seed();
 
     _impl->dto.nameC = name;
+    _impl->dto.portC = portC;
     _impl->dto.keyC.clear();
 
     //生成一段16个字节的随机字符串
@@ -64,7 +69,7 @@ std::string Accept::CreateAcceptString(const std::string& name)
     return xuexue::json::JsonMapper::toJson(_impl->dto);
 }
 
-std::string Accept::ReplyAcceptString(const std::string& acceptString, const std::string& name, int conv)
+std::string Accept::ReplyAcceptString(const std::string& acceptString, const std::string& name, int conv, int portS)
 {
     _impl->dto = xuexue::json::JsonMapper::toObject<AcceptDto>(acceptString);
     if (_impl->dto.keyC.empty() || _impl->dto.nameC.empty()) {
@@ -73,6 +78,7 @@ std::string Accept::ReplyAcceptString(const std::string& acceptString, const std
     }
 
     _impl->dto.nameS = name;
+    _impl->dto.portS = portS;
     _impl->dto.conv = conv;
     _impl->dto.keyS.clear();
 
@@ -103,10 +109,12 @@ bool Accept::VerifyReplyAccept(const std::string& replyAcceptString, std::string
 
     bool isSuccess = false;
     if (serverDto.nameC == _impl->dto.nameC &&
+        serverDto.portC == _impl->dto.portC &&
         serverDto.keyC == _impl->dto.keyC) {
         isSuccess = true;
         _impl->dto.keyS = serverDto.keyS;
         _impl->dto.nameS = serverDto.nameS;
+        _impl->dto.portS = serverDto.portS;
         _impl->dto.conv = serverDto.conv;
 
         serName = serverDto.nameS;
@@ -130,6 +138,16 @@ std::string Accept::nameC()
 std::string Accept::nameS()
 {
     return _impl->dto.nameS;
+}
+
+int Accept::portC()
+{
+    return _impl->dto.portC;
+}
+
+int Accept::portS()
+{
+    return _impl->dto.portS;
 }
 
 } // namespace dxlib

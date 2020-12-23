@@ -70,6 +70,18 @@ class ClientManager
         }
     }
 
+    /**
+     * 关闭所有客户端并且重置.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     */
+    void Clear()
+    {
+        mClients.clear();
+        _clientCount = 0;
+    }
+
   private:
     int _clientCount = 0;
 };

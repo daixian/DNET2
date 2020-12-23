@@ -21,8 +21,21 @@ class TCPClient
 {
   public:
     TCPClient();
+
+    TCPClient(int port);
+
     ~TCPClient();
 
+    /**
+     * 服务器创建一个客户端.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @param          tcpID  Identifier for the TCP.
+     * @param [in,out] socket If non-null, the socket.
+     * @param [in,out] obj    The object.
+     */
     static void CreateWithServer(int tcpID, void* socket, TCPClient& obj);
 
     /**
@@ -34,6 +47,14 @@ class TCPClient
      * @returns The tcpid.
      */
     int GetTcpID();
+
+    /**
+     * 关闭TCP客户端
+     *
+     * @author daixian
+     * @date 2020/12/23
+     */
+    void Close();
 
     /**
      * 连接主机.
@@ -106,6 +127,16 @@ class TCPClient
      * @returns 接收到的数据条数.
      */
     int Receive(std::vector<std::string>& msgs);
+
+    /**
+     * 得到这个客户端的Poco的Socket指针(Poco::Net::StreamSocket).
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns Poco::Net::StreamSocket类型的指针.
+     */
+    void* Socket();
 
   private:
     class Impl;

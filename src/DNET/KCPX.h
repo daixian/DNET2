@@ -149,6 +149,15 @@ class KCPX
      */
     int GetConvIDWithName(const std::string& name);
 
+    /**
+     * 客户端是否正在向服务器端Accept
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns True if accepting, false if not.
+     */
+    bool isAccepting();
   private:
     class Impl;
     Impl* _impl = nullptr;

@@ -27,6 +27,8 @@ class TCPClient::Impl
     }
     ~Impl()
     {
+        //析构的时候尝试关闭
+        Close();
     }
 
     // 名字.
@@ -237,6 +239,11 @@ TCPClient::TCPClient()
     _impl = new Impl();
 }
 
+TCPClient::TCPClient(int port)
+{
+    _impl = new Impl();
+}
+
 TCPClient::~TCPClient()
 {
     delete _impl;
@@ -270,6 +277,11 @@ void TCPClient::CreateWithServer(int tcpID, void* socket, TCPClient& obj)
 int TCPClient::GetTcpID()
 {
     return _impl->tcpID;
+}
+
+void TCPClient::Close()
+{
+    return _impl->Close();
 }
 
 int TCPClient::Connect(const std::string& host, int port)
@@ -310,5 +322,10 @@ int TCPClient::WaitAvailable(int waitCount)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return 0;
+}
+
+void* TCPClient::Socket()
+{
+    return &_impl->socket;
 }
 } // namespace dxlib

@@ -11,12 +11,12 @@ TEST(KCPX, Accept)
 {
     dlog_set_console_thr(dlog_level::debug);
 
-    KCPX kcp_s("server", "localhost", 9991);
+    KCPX kcp_s("server", "127.0.0.1", 9991); // "localhost",localhost连接不上在cmd中ping localhost解析出来的是IPV6的::1
     kcp_s.Init();
-    KCPX kcp_c("client", "localhost", 8881);
+    KCPX kcp_c("client", "127.0.0.1", 8881);
     kcp_c.Init();
 
-    kcp_c.SendAccept("localhost", 9991);
+    kcp_c.SendAccept( "127.0.0.1", 9991);
 
     while (true) {
         std::map<int, std::vector<std::string>> msgs;
@@ -42,12 +42,12 @@ TEST(KCPX, SendRece)
 {
     dlog_set_console_thr(dlog_level::debug);
 
-    KCPX kcp_s("server", "localhost", 9991);
+    KCPX kcp_s("server", "127.0.0.1", 9991);
     kcp_s.Init();
-    KCPX kcp_c("client", "localhost", 8881);
+    KCPX kcp_c("client", "127.0.0.1", 8881);
     kcp_c.Init();
 
-    kcp_c.SendAccept("localhost", 9991);
+    kcp_c.SendAccept("127.0.0.1", 9991);
 
     int successCount = 0;
     while (true) {
