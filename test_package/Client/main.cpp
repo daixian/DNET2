@@ -21,9 +21,10 @@ int main(int argc, char* argv[])
     dlog_memory_log_enable(false);
     dlog_set_console_thr(dlog_level::info);
 
-    KCPX kcp_c("client", "localhost", 8882);
+    KCPX kcp_c("client", "0.0.0.0", 8882);
     kcp_c.Init();
-    kcp_c.SendAccept("localhost", 9991);
+    //kcp_c.SendAccept("127.0.0.1", 9991);
+    kcp_c.SendAccept("home.xuexuesoft.com", 9991);
 
     int conv = 0;
     std::map<int, std::vector<std::string>> msgs;

@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     dlog_memory_log_enable(false);
     dlog_set_console_thr(dlog_level::info);
 
-    KCPX kcp_s("server", "localhost", 9991);
+    KCPX kcp_s("server", "0.0.0.0", 9991);
     kcp_s.Init();
 
     while (true) {
@@ -32,8 +32,8 @@ int main(int argc, char* argv[])
             }
         }
 
-        //std::this_thread::yield();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::yield(); //快速响应
+        //std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     return 0;

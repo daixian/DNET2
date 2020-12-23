@@ -372,7 +372,7 @@ class KCPX::Impl
             }
         }
         catch (const Poco::Exception& e) {
-            LogE("KCPX.Receive():异常%s %s", e.what(), e.message().c_str());
+            LogE("KCPX.Receive():异常%s,%s", e.what(), e.message().c_str());
         }
         catch (const std::exception& e) {
             LogE("KCPX.Receive():异常:%s", e.what());

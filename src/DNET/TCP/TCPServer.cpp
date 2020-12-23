@@ -45,11 +45,10 @@ class TCPAcceptRunnable : public Poco::Runnable
 
     virtual void run()
     {
-        int port = address.port();
-        socket = new Poco::Net::ServerSocket(port);
+        socket = new Poco::Net::ServerSocket(address);
 
         socket->setBlocking(false);
-        LogI("TCPServer.Start():TCPServer开始监听...");
+        LogI("TCPServer.Start():TCPServer开始监听(%s:%d)...", address.host().toString().c_str(), address.port());
         Poco::Timespan span(250000);
         while (isRun) {
             try {

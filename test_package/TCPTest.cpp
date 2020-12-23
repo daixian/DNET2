@@ -69,7 +69,7 @@ using Poco::Net::StreamSocket;
 
 TEST(TCPServer, sendBytes)
 {
-    TCPServer server("server", "127.0.0.1", 8341);
+    TCPServer server("server", "0.0.0.0", 8341);
     server.Start();
     while (!server.IsStarted()) {
         this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -77,6 +77,50 @@ TEST(TCPServer, sendBytes)
 
     TCPClient client;
     client.Connect("127.0.0.1", 8341);
+
+    //this_thread::sleep_for(std::chrono::seconds(1));
+
+    std::string msg = "1234567890";
+    int res = client.Send(msg.c_str(), msg.size());
+
+    {
+        std::map<int, std::vector<std::vector<char>>> msgs;
+        server.WaitAvailable(0); //只有一个客户端,那么id应该为0
+        server.Receive(msgs);
+        if (!msg.empty())
+            for (auto& kvp : msgs) {
+                ASSERT_EQ(kvp.second.size(), 1);
+                ASSERT_EQ(kvp.second[0].size(), msg.size());
+                LogI("服务器收到了客户端数据!");
+                //回发这条数据
+                server.Send(kvp.first, kvp.second[0].data(), kvp.second[0].size());
+            }
+    }
+
+    {
+        std::vector<std::vector<char>> msgs;
+        client.WaitAvailable();
+        client.Receive(msgs);
+        if (!msgs.empty()) {
+            ASSERT_EQ(msgs.size(), 1);
+            ASSERT_EQ(msgs[0].size(), msg.size());
+            LogI("客户端收到了服务器数据!");
+        }
+    }
+
+    server.Close();
+}
+
+TEST(TCPServer, sendBytes_localhost)
+{
+    TCPServer server("server", "localhost", 8341);
+    server.Start();
+    while (!server.IsStarted()) {
+        this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    TCPClient client;
+    client.Connect("localhost", 8341);
 
     //this_thread::sleep_for(std::chrono::seconds(1));
 

@@ -62,7 +62,7 @@ class TCPClient
      * @author daixian
      * @date 2020/12/22
      *
-     * @param  host The host.
+     * @param  host 主机地址,目前在内部使用的是IPv4.
      * @param  port The port.
      *
      * @returns 连接成功返回0.

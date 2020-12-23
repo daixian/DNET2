@@ -1,20 +1,19 @@
 ﻿#include "TCPClient.h"
 
-#include "Poco/Net/SocketAddress.h"
-#include "Poco/Net/StreamSocket.h"
 #include "Poco/Net/Socket.h"
 #include "Poco/Net/StreamSocket.h"
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/NetException.h"
 #include "Poco/Timespan.h"
 #include "Poco/Net/SocketStream.h"
-#include "Poco/Net/SocketAddress.h"
 
 #include "ClientManager.h"
 #include "Protocol/FastPacket.h"
 #include "dlog/dlog.h"
 
 #include <thread>
+
+#define XUEXUE_TCP_CLIENT_BUFFER_SIZE 8 * 1024
 
 namespace dxlib {
 
@@ -23,7 +22,7 @@ class TCPClient::Impl
   public:
     Impl()
     {
-        receBuff.resize(16 * 1024);
+        receBuff.resize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);
     }
     ~Impl()
     {
@@ -68,7 +67,8 @@ class TCPClient::Impl
 
         try {
             LogI("TCPClient.Connect():尝试连接%s:%d...", host.c_str(), port);
-            Poco::Net::SocketAddress sa(host, port);
+            Poco::Net::SocketAddress sa(Poco::Net::SocketAddress::Family::IPv4, host, port);
+
             socket.connect(sa); //这个是阻塞的连接
         }
         catch (Poco::Net::ConnectionRefusedException& e) {
@@ -97,8 +97,8 @@ class TCPClient::Impl
         socket.setSendTimeout(timeout4); //retn void
 
         //setopt bufsize
-        socket.setReceiveBufferSize(16 * 1024); //buff大小
-        socket.setSendBufferSize(16 * 1024);    //buff大小
+        socket.setReceiveBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE); //buff大小
+        socket.setSendBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);    //buff大小
 
         socket.setNoDelay(true);
         socket.setBlocking(false);
@@ -266,8 +266,8 @@ void TCPClient::CreateWithServer(int tcpID, void* socket, TCPClient& obj)
     obj._impl->socket.setSendTimeout(timeout4); //retn void
 
     //setopt bufsize
-    obj._impl->socket.setReceiveBufferSize(16 * 1024); //buff大小
-    obj._impl->socket.setSendBufferSize(16 * 1024);    //buff大小
+    obj._impl->socket.setReceiveBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE); //buff大小
+    obj._impl->socket.setSendBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);    //buff大小
 
     obj._impl->socket.setNoDelay(true);
     obj._impl->socket.setBlocking(false);
