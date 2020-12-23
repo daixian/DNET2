@@ -16,7 +16,7 @@ class ClientManager
     ~ClientManager() {}
 
     // 所有连接了的客户端.
-    std::map<int, TCPClient> mClients;
+    std::map<int, TCPClient*> mClients;
 
     /**
      * 服务器添加一个客户端进来记录.
@@ -30,7 +30,9 @@ class ClientManager
      */
     int AddClient(Poco::Net::StreamSocket& client)
     {
-        TCPClient::CreateWithServer(_clientCount, &client, mClients[_clientCount]);
+        TCPClient* tcobj = new TCPClient();
+        TCPClient::CreateWithServer(_clientCount, &client, *tcobj);
+        mClients[_clientCount] = tcobj;
         _clientCount++; //永远递增
         return _clientCount - 1;
     }
@@ -48,7 +50,7 @@ class ClientManager
     TCPClient* GetClient(int tcpID)
     {
         if (mClients.find(tcpID) != mClients.end()) {
-            return &mClients[tcpID];
+            return mClients[tcpID];
         }
         return nullptr;
     }
@@ -66,6 +68,7 @@ class ClientManager
     void RemoveClient(int tcpID)
     {
         if (mClients.find(tcpID) != mClients.end()) {
+            delete mClients[tcpID];
             mClients.erase(tcpID);
         }
     }
@@ -78,6 +81,9 @@ class ClientManager
      */
     void Clear()
     {
+        for (auto& kvp : mClients) {
+            delete kvp.second;
+        }
         mClients.clear();
         _clientCount = 0;
     }

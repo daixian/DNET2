@@ -28,6 +28,26 @@ class TCPServer
     int port = -1;
 
     /**
+     * 返回这个服务端的UUID.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns A std::string.
+     */
+    std::string UUID();
+
+    /**
+     * 设置它的UUID.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns A std::string.
+     */
+    std::string SetUUID(const std::string& uuid);
+
+    /**
      * 启动监听.
      *
      * @author daixian

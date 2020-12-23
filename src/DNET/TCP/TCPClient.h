@@ -39,14 +39,34 @@ class TCPClient
     static void CreateWithServer(int tcpID, void* socket, TCPClient& obj);
 
     /**
-     * Gets the tcpid
+     * 如果有就是它的tcpID,没有则是-1
      *
      * @author daixian
      * @date 2020/12/22
      *
      * @returns The tcpid.
      */
-    int GetTcpID();
+    int TcpID();
+
+    /**
+     * 返回这个客户端的UUID.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns A std::string.
+     */
+    std::string UUID();
+
+    /**
+     * 设置它的UUID.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns A std::string.
+     */
+    std::string SetUUID(const std::string& uuid);
 
     /**
      * 关闭TCP客户端

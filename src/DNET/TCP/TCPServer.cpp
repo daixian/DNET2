@@ -11,6 +11,7 @@
 #include "Poco/Thread.h"
 #include "Poco/Runnable.h"
 #include "Poco/RunnableAdapter.h"
+#include "Poco/UUIDGenerator.h"
 
 #include <thread>
 #include <mutex>
@@ -98,7 +99,12 @@ class TCPAcceptRunnable : public Poco::Runnable
 class TCPServer::Impl
 {
   public:
-    Impl() {}
+    Impl()
+    {
+        //随机生成一个uuid
+        Poco::UUIDGenerator uuidGen;
+        uuid = uuidGen.createRandom().toString();
+    }
     ~Impl()
     {
         Close();
@@ -106,6 +112,9 @@ class TCPServer::Impl
 
     // 服务器的名字.
     std::string name;
+
+    // 这个客户端的唯一标识符
+    std::string uuid;
 
     // 认证线程
     Poco::Thread* acceptThread = nullptr;
@@ -202,7 +211,7 @@ class TCPServer::Impl
 
         for (auto& kvp : clientManager.mClients) {
             std::vector<std::vector<char>> clientMsgs;
-            if (kvp.second.Receive(clientMsgs) > 0) {
+            if (kvp.second->Receive(clientMsgs) > 0) {
                 msgs[kvp.first] = clientMsgs;
             }
         }
@@ -215,7 +224,7 @@ class TCPServer::Impl
 
         for (auto& kvp : clientManager.mClients) {
             std::vector<std::string> clientMsgs;
-            if (kvp.second.Receive(clientMsgs) > 0) {
+            if (kvp.second->Receive(clientMsgs) > 0) {
                 msgs[kvp.first] = clientMsgs;
             }
         }
@@ -232,6 +241,17 @@ TCPServer::TCPServer(const std::string& name, const std::string& host, int port)
 TCPServer::~TCPServer()
 {
     delete _impl;
+}
+
+std::string TCPServer::UUID()
+{
+    return _impl->uuid;
+}
+
+std::string TCPServer::SetUUID(const std::string& uuid)
+{
+    _impl->uuid = uuid;
+    return _impl->uuid;
 }
 
 void TCPServer::Start()

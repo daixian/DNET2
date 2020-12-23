@@ -6,6 +6,7 @@
 #include "Poco/Net/NetException.h"
 #include "Poco/Timespan.h"
 #include "Poco/Net/SocketStream.h"
+#include "Poco/UUIDGenerator.h"
 
 #include "ClientManager.h"
 #include "Protocol/FastPacket.h"
@@ -23,6 +24,10 @@ class TCPClient::Impl
     Impl()
     {
         receBuff.resize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);
+
+        //随机生成一个uuid
+        Poco::UUIDGenerator uuidGen;
+        uuid = uuidGen.createRandom().toString();
     }
     ~Impl()
     {
@@ -35,6 +40,9 @@ class TCPClient::Impl
 
     // 一个tcp的ID.
     int tcpID = -1;
+
+    // 这个客户端的唯一标识符
+    std::string uuid;
 
     // 客户端的socket
     Poco::Net::StreamSocket socket;
@@ -66,7 +74,7 @@ class TCPClient::Impl
         Close(); //先试试无脑关闭
 
         try {
-            LogI("TCPClient.Connect():尝试连接%s:%d...", host.c_str(), port);
+            LogI("TCPClient.Connect():{%s}尝试连接远程%s:%d...", host.c_str(), port, uuid.c_str());
             Poco::Net::SocketAddress sa(Poco::Net::SocketAddress::Family::IPv4, host, port);
 
             socket.connect(sa); //这个是阻塞的连接
@@ -274,9 +282,20 @@ void TCPClient::CreateWithServer(int tcpID, void* socket, TCPClient& obj)
     return;
 }
 
-int TCPClient::GetTcpID()
+int TCPClient::TcpID()
 {
     return _impl->tcpID;
+}
+
+std::string TCPClient::UUID()
+{
+    return _impl->uuid;
+}
+
+std::string TCPClient::SetUUID(const std::string& uuid)
+{
+    _impl->uuid = uuid;
+    return _impl->uuid;
 }
 
 void TCPClient::Close()
