@@ -433,4 +433,8 @@ int KCPServer::GetConvIDWithUUID(const std::string& uuid)
     return -1;
 }
 
+TCPServer* KCPServer::GetTCPServer()
+{
+    return _impl->tcpServer;
+}
 } // namespace dxlib

@@ -4,6 +4,8 @@
 #include <vector>
 #include <map>
 
+#include "TCP/TCPServer.h"
+
 namespace dxlib {
 
 /**
@@ -152,6 +154,16 @@ class KCPServer
      * @returns The convert with name.
      */
     int GetConvIDWithUUID(const std::string& uuid);
+
+    /**
+     * 得到它的TCP成员对象.在握手阶段会使用这个TCP.
+     *
+     * @author daixian
+     * @date 2020/12/25
+     *
+     * @returns TCPServer指针.
+     */
+    TCPServer* GetTCPServer();
 
   private:
     class Impl;

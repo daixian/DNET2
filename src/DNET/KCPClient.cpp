@@ -279,7 +279,7 @@ class KCPClient::Impl
     int WaitSendCount()
     {
         if (socket == nullptr || kcpRemote == nullptr) {
-            LogE("KCPClient.WaitSendCount():%s 还没有初始化,不能发送!", name);
+            LogE("KCPClient.WaitSendCount():%s 还没有初始化,未开始发送!", name.c_str());
             return 0;
         }
 
@@ -289,13 +289,13 @@ class KCPClient::Impl
     int Send(const char* data, int len)
     {
         if (socket == nullptr || kcpRemote == nullptr) {
-            LogE("KCPClient.Send():%s 还没有初始化,不能发送!", name);
+            LogE("KCPClient.Send():%s 还没有初始化,不能发送!", name.c_str());
             return -1;
         }
 
         int res = ikcp_send(kcpRemote, data, len);
         if (res < 0) {
-            LogE("KCPClient.Send():发送异常返回%d", res);
+            LogE("KCPClient.Send():发送异常返回 res=%d", res);
         }
         ikcp_flush(kcpRemote); //尝试暴力flush
         return res;
@@ -400,6 +400,11 @@ int KCPClient::Send(const char* data, int len)
 int KCPClient::WaitSendCount()
 {
     return _impl->WaitSendCount();
+}
+
+TCPClient* KCPClient::GetTCPClient()
+{
+    return _impl->tcpClient;
 }
 
 } // namespace dxlib

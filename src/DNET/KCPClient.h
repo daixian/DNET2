@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "TCP/TCPClient.h"
 
 namespace dxlib {
 
@@ -133,7 +134,7 @@ class KCPClient
     int Send(const char* data, int len);
 
     /**
-     * Wait send count
+     * 当前等待发送的消息计数.如果这个数量太多,那么已经拥塞.
      *
      * @author daixian
      * @date 2020/12/20
@@ -143,6 +144,16 @@ class KCPClient
      * @returns An int.
      */
     int WaitSendCount();
+
+    /**
+     * 得到它的TCP成员对象.在握手阶段会使用这个TCP.
+     *
+     * @author daixian
+     * @date 2020/12/25
+     *
+     * @returns TCPClient指针.
+     */
+    TCPClient* GetTCPClient();
 
   private:
     class Impl;
