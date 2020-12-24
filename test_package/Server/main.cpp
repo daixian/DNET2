@@ -1,4 +1,4 @@
-﻿#include "DNET/KCPX.h"
+﻿#include "DNET/KCPServer.h"
 
 #include "dlog/dlog.h"
 #include <thread>
@@ -18,8 +18,8 @@ int main(int argc, char* argv[])
     dlog_memory_log_enable(false);
     dlog_set_console_thr(dlog_level::info);
 
-    KCPX kcp_s("server", "0.0.0.0", 9991);
-    kcp_s.Init();
+    KCPServer kcp_s("server", "0.0.0.0", 9991);
+    kcp_s.Start();
 
     while (true) {
         std::map<int, std::vector<std::string>> msgs;

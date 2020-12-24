@@ -74,7 +74,7 @@ class KCPServer
      * @author daixian
      * @date 2020/5/12
      */
-    void Init();
+    void Start();
 
     /**
      * 关闭.
@@ -132,7 +132,7 @@ class KCPServer
     int RemoteCount();
 
     /**
-     * 得到当前所有记录的Remote名字.
+     * 得到当前所有记录的Remote名字(UUID).
      *
      * @author daixian
      * @date 2020/12/19

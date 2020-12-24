@@ -71,9 +71,7 @@ TEST(TCPServer, sendBytes)
 {
     TCPServer server("server", "0.0.0.0", 8341);
     server.Start();
-    while (!server.IsStarted()) {
-        this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    server.WaitStarted();
 
     TCPClient client;
     client.Connect("127.0.0.1", 8341);
@@ -115,9 +113,7 @@ TEST(TCPServer, sendBytes_localhost)
 {
     TCPServer server("server", "localhost", 8341);
     server.Start();
-    while (!server.IsStarted()) {
-        this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    server.WaitStarted();
 
     TCPClient client;
     client.Connect("localhost", 8341);
@@ -159,9 +155,7 @@ TEST(TCPServer, sendText)
 {
     TCPServer server("server", "127.0.0.1", 8341);
     server.Start();
-    while (!server.IsStarted()) {
-        this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    server.WaitStarted();
 
     TCPClient client;
     client.Connect("127.0.0.1", 8341);
@@ -197,9 +191,7 @@ TEST(TCPServer, sendText_128Client)
 {
     TCPServer server("server", "127.0.0.1", 8341);
     server.Start();
-    while (!server.IsStarted()) {
-        this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    server.WaitStarted();
 
     std::vector<TCPClient> clients;
     clients.resize(128);

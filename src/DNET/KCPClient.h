@@ -40,6 +40,26 @@ class KCPClient
     std::string name;
 
     /**
+     * 返回这个UUID.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns A std::string.
+     */
+    std::string UUID();
+
+    /**
+     * 设置它的UUID.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns A std::string.
+     */
+    std::string SetUUID(const std::string& uuid);
+
+    /**
      * 向服务端发送一条认证字符串,然后等待服务器回复.
      *
      * @author daixian
@@ -58,6 +78,26 @@ class KCPClient
      * @returns True if accepting, false if not.
      */
     bool isAccepting();
+
+    /**
+     * 是否已经通过了认证
+     *
+     * @author daixian
+     * @date 2020/12/24
+     *
+     * @returns True if accepted, false if not.
+     */
+    bool isAccepted();
+
+    /**
+     * 等待认证成功
+     *
+     * @author daixian
+     * @date 2020/12/24
+     *
+     * @param  waitCount (Optional) 等待的次数,一次100ms吧.
+     */
+    void WaitAccepted(int waitCount = 50);
 
     /**
      * 关闭.

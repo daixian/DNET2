@@ -47,15 +47,15 @@ int kcps_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
         //    LogE("KCP2.udp_output():%s还没有remote记录,不能发送!", u->name);
         //    return -1;
         //}
-        LogD("KCPX.udp_output():向%s执行sendBytes()! len=%d", u->uuid_remote.c_str(), len);
+        LogD("KCPServer.udp_output():向{%s}发送! len=%d", u->uuid_remote.c_str(), len);
         return u->socket->sendTo(buf, len, u->remote);
     }
     catch (const Poco::Exception& e) {
-        LogE("KCPX.udp_output():异常%s %s", e.what(), e.message().c_str());
+        LogE("KCPServer.udp_output():异常%s %s", e.what(), e.message().c_str());
         return -1;
     }
     catch (const std::exception& e) {
-        LogE("KCPX.udp_output():异常:%s", e.what());
+        LogE("KCPServer.udp_output():异常:%s", e.what());
         return -1;
     }
 }
@@ -107,7 +107,7 @@ class KCPServer::Impl
      * @param  host The host.
      * @param  port The port.
      */
-    void Init(const std::string& name, const std::string& host, int port)
+    void Start(const std::string& name, const std::string& host, int port)
     {
         try {
             this->name = name;
@@ -124,10 +124,10 @@ class KCPServer::Impl
             tcpServer->WaitStarted();
         }
         catch (const Poco::Exception& e) {
-            LogE("KCPServer.Init():异常%s %s", e.what(), e.message().c_str());
+            LogE("KCPServer.Start():异常%s %s", e.what(), e.message().c_str());
         }
         catch (const std::exception& e) {
-            LogE("KCPServer.Init():异常:%s", e.what());
+            LogE("KCPServer.Start():异常:%s", e.what());
         }
     }
 
@@ -160,7 +160,7 @@ class KCPServer::Impl
     }
 
     /**
-     * 得到一个当前可用的ID号
+     * 得到一个当前可用的UPD的conv号
      *
      * @author daixian
      * @date 2020/12/19
@@ -170,17 +170,14 @@ class KCPServer::Impl
     int GetConv()
     {
         int conv = 1;
-        bool isFind = false;
-        while (!isFind) {
-            for (auto& kvp : remotes) {
-                if (kvp.first == conv) {
-                    conv++;
-                    break;
-                }
+        while (true) {
+            if (remotes.find(conv) != remotes.end()) {
+                conv++;
             }
-            isFind = true;
+            else {
+                return conv;
+            }
         }
-        return conv;
     }
 
     // TCP的服务器端接收认证的处理
@@ -200,7 +197,7 @@ class KCPServer::Impl
             std::string replyStr = kcpUser->accept.ReplyAcceptString(acceptStr, uuid, conv, this->port); //使用这个新的客户端用户做accept
             if (replyStr.empty()) {
                 // replyStr为空,非法的认证信息
-                LogE("KCPServer.kcpAcceptReceive():非法的认证信息!");
+                LogE("KCPServer.TCPServerAcceptReceive():非法的认证信息!");
                 delete kcpUser;
             }
             else {
@@ -218,7 +215,7 @@ class KCPServer::Impl
                 //kcp->rx_minrto = 10;
                 //kcp->fastresend = 1;
                 remotes[conv] = kcp; //添加这个新客户端
-                LogI("KCPServer.kcpAcceptReceive():添加了一个新客户端%s,Addr=%s:%d,分配conv=%d", kcpUser->uuid_remote.c_str(),
+                LogI("KCPServer.TCPServerAcceptReceive():添加了一个新客户端%s,Addr=%s:%d,分配conv=%d", kcpUser->uuid_remote.c_str(),
                      kcpUser->remote.host().toString().c_str(),
                      kcpUser->remote.port(), conv);
             }
@@ -361,9 +358,21 @@ KCPServer::~KCPServer()
     delete _impl;
 }
 
-void KCPServer::Init()
+std::string KCPServer::UUID()
 {
-    _impl->Init(name, host, port);
+    return _impl->uuid;
+}
+
+std::string KCPServer::SetUUID(const std::string& uuid)
+{
+    _impl->uuid = uuid;
+    _impl->tcpServer->SetUUID(uuid);
+    return _impl->uuid;
+}
+
+void KCPServer::Start()
+{
+    _impl->Start(name, host, port);
 }
 
 void KCPServer::Close()

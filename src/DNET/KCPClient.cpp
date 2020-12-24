@@ -48,7 +48,7 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
         //    LogE("KCP2.udp_output():%s还没有remote记录,不能发送!", u->name);
         //    return -1;
         //}
-        LogD("KCPClient.udp_output():向%s执行sendBytes()! len=%d", u->uuid_remote.c_str(), len);
+        LogD("KCPClient.udp_output():向{%s}发送! len=%d", u->uuid_remote.c_str(), len);
         return u->socket->sendTo(buf, len, u->remote);
     }
     catch (const Poco::Exception& e) {
@@ -194,7 +194,7 @@ class KCPClient::Impl
             kcpUser->uuid_remote = remoteName;
             kcpUser->remote = tcs->peerAddress(); //使用实际的远程端口就行了应该
 
-            LogI("KCPClient.SendAccept():%s(%s:%d)远程通知来的conv=%d,认证成功!", remoteName.c_str(),
+            LogI("KCPClient.TCPClientAcceptReceive():%s(%s:%d)远程通知来的conv=%d,认证成功!", remoteName.c_str(),
                  kcpUser->remote.host().toString().c_str(),
                  kcpUser->remote.port(), conv);
 
@@ -231,7 +231,7 @@ class KCPClient::Impl
         TCPClientAcceptReceive();
 
         if (socket == nullptr) {
-            LogE("KCPX.Receive():%s 还没有初始化,不能接收!", name);
+            LogE("KCPClient.Receive():%s 还没有初始化,不能接收!", name);
             return -1;
         }
 
@@ -246,7 +246,7 @@ class KCPClient::Impl
             Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
             int n = socket->receiveFrom(receBuf.data(), (int)receBuf.size(), remote);
             if (n != -1) {
-                LogD("KCPX.Receive():%s Socket接收到了数据,长度%d", name, n);
+                LogD("KCPClient.Receive():%s Socket接收到了数据,长度%d", name, n);
 
                 //尝试给kcp看看是否是它的信道的数据
                 rece = ikcp_input(kcp, receBuf.data(), n);
@@ -266,10 +266,10 @@ class KCPClient::Impl
             }
         }
         catch (const Poco::Exception& e) {
-            LogE("KCPX.Receive():异常%s,%s", e.what(), e.message().c_str());
+            LogE("KCPClient.Receive():异常%s,%s", e.what(), e.message().c_str());
         }
         catch (const std::exception& e) {
-            LogE("KCPX.Receive():异常:%s", e.what());
+            LogE("KCPClient.Receive():异常:%s", e.what());
         }
 
         return (int)user->receData.size();
@@ -279,7 +279,7 @@ class KCPClient::Impl
     int WaitSendCount()
     {
         if (socket == nullptr || kcpRemote == nullptr) {
-            LogE("KCPX.WaitSendCount():%s 还没有初始化,不能发送!", name);
+            LogE("KCPClient.WaitSendCount():%s 还没有初始化,不能发送!", name);
             return 0;
         }
 
@@ -289,13 +289,13 @@ class KCPClient::Impl
     int Send(const char* data, int len)
     {
         if (socket == nullptr || kcpRemote == nullptr) {
-            LogE("KCPX.Send():%s 还没有初始化,不能发送!", name);
+            LogE("KCPClient.Send():%s 还没有初始化,不能发送!", name);
             return -1;
         }
 
         int res = ikcp_send(kcpRemote, data, len);
         if (res < 0) {
-            LogE("KCPX.Send():发送异常返回%d", res);
+            LogE("KCPClient.Send():发送异常返回%d", res);
         }
         ikcp_flush(kcpRemote); //尝试暴力flush
         return res;
@@ -324,9 +324,54 @@ KCPClient::~KCPClient()
     delete _impl;
 }
 
+std::string KCPClient::UUID()
+{
+    return _impl->uuid;
+}
+
+std::string KCPClient::SetUUID(const std::string& uuid)
+{
+    _impl->uuid = uuid;
+    _impl->tcpClient->SetUUID(uuid);
+    return _impl->uuid;
+}
+
+int KCPClient::Connect(const std::string& host, int port)
+{
+    int res = _impl->SendAccept(host, port);
+    _impl->Update();
+    return res;
+}
+
 void KCPClient::Close()
 {
     _impl->Close();
+}
+
+bool KCPClient::isAccepting()
+{
+    if (_impl->clientTempAccept != nullptr) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+bool KCPClient::isAccepted()
+{
+    if (_impl->kcpRemote != nullptr) {
+        return true;
+    }
+    return false;
+}
+
+void KCPClient::WaitAccepted(int waitCount)
+{
+    while (!isAccepted()) {
+        _impl->TCPClientAcceptReceive();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
 }
 
 int KCPClient::Receive(std::vector<std::string>& msgs)
@@ -352,26 +397,9 @@ int KCPClient::Send(const char* data, int len)
     return res;
 }
 
-int KCPClient::Connect(const std::string& host, int port)
-{
-    int res = _impl->SendAccept(host, port);
-    _impl->Update();
-    return res;
-}
-
 int KCPClient::WaitSendCount()
 {
     return _impl->WaitSendCount();
-}
-
-bool KCPClient::isAccepting()
-{
-    if (_impl->clientTempAccept != nullptr) {
-        return true;
-    }
-    else {
-        return false;
-    }
 }
 
 } // namespace dxlib
