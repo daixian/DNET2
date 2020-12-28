@@ -91,7 +91,10 @@ class KCPServer::Impl
     // TCP的socket用于服务器监听握手信息端口和UDP一致
     TCPServer* tcpServer = nullptr;
 
-    //socket使用的buff ,最好大于1400吧
+    // 用户连接进来了的事件.
+    Poco::BasicEvent<KCPEventAccept> eventAccept;
+
+    // socket使用的buff,最好大于1400吧
     std::vector<char> receBuf;
 
     // 远程对象列表
@@ -160,7 +163,7 @@ class KCPServer::Impl
     }
 
     /**
-     * 得到一个当前可用的UPD的conv号
+     * 得到一个当前可用的UPD的conv号(目前未使用)
      *
      * @author daixian
      * @date 2020/12/19
@@ -195,8 +198,8 @@ class KCPServer::Impl
 
             //int conv = GetConv(); 这里改为使用tcpid算了
             int conv = tcpID;
-            KCPUser* kcpUser = new KCPUser(socket, conv);                                                //准备创建新的客户端用户
-            std::string replyStr = kcpUser->accept.ReplyAcceptString(acceptStr, uuid, conv, this->port); //使用这个新的客户端用户做accept
+            KCPUser* kcpUser = new KCPUser(socket, conv);                                          //准备创建新的客户端用户
+            std::string replyStr = kcpUser->accept.ReplyAcceptString(acceptStr, uuid, name, conv); //使用这个新的客户端用户做accept
             if (replyStr.empty()) {
                 // replyStr为空,非法的认证信息
                 LogE("KCPServer.TCPServerAcceptReceive():非法的认证信息!");
@@ -206,7 +209,8 @@ class KCPServer::Impl
                 // replyStr有内容,有效的认证信息,自己是服务器端
                 Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpServer->GetClientSocket(tcpID);
                 kcpUser->remote = tcs->peerAddress(); //绑定客户端实际发来的端口
-                kcpUser->uuid_remote = kcpUser->accept.nameC();
+                kcpUser->name_remote = kcpUser->accept.nameC();
+                kcpUser->uuid_remote = kcpUser->accept.uuidC();
                 tcpServer->Send(tcpID, replyStr.c_str(), replyStr.size());
 
                 ikcpcb* kcp = ikcp_create(conv, kcpUser);
@@ -220,6 +224,10 @@ class KCPServer::Impl
                 LogI("KCPServer.TCPServerAcceptReceive():添加了一个新客户端%s,Addr=%s:%d,分配conv=%d", kcpUser->uuid_remote.c_str(),
                      kcpUser->remote.host().toString().c_str(),
                      kcpUser->remote.port(), conv);
+
+                //发出这个事件消息
+                KCPEventAccept eventMsg(conv, kcpUser->accept);
+                eventAccept.notify(this, eventMsg);
             }
         }
     }
@@ -353,6 +361,7 @@ KCPServer::KCPServer(const std::string& name,
                      const std::string& host, int port) : name(name), host(host), port(port)
 {
     _impl = new Impl();
+    _impl->name = name;
 }
 
 KCPServer::~KCPServer()
@@ -380,6 +389,11 @@ void KCPServer::Start()
 void KCPServer::Close()
 {
     _impl->Close();
+}
+
+Poco::BasicEvent<KCPEventAccept>& KCPServer::EventAccept()
+{
+    return _impl->eventAccept;
 }
 
 int KCPServer::Receive(std::map<int, std::vector<std::string>>& msgs)

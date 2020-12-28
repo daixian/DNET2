@@ -59,7 +59,7 @@ class TCPAcceptRunnable : public Poco::Runnable
                     int tcpID = clientManager->AddClient(streamSocket); //添加这个用户
                     TCPEventAccept msg(tcpID);
                     LogI("TCPAcceptRunnable.run():新连接来了一个客户端%d", tcpID);
-                    eventAccept->notify(this, msg); //发出这个消息
+                    eventAccept->notify(this, msg); //发出这个事件消息
                 }
                 else {
                     isStarted = true; //标记已经启动了

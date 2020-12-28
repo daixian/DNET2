@@ -13,16 +13,23 @@ TEST(Accept, CreateAcceptString)
     Accept accept;
 
     for (size_t i = 0; i < 1000; i++) {
-        std::string str = accept.CreateAcceptString("clinet", 8888);
+        std::string str = accept.CreateAcceptString("uuid_clinet", "clinet");
 
         Accept acceptS;
-        std::string str2 = acceptS.ReplyAcceptString(str, "service", i, 9999);
+        std::string str2 = acceptS.ReplyAcceptString(str, "uuid_service", "service", i);
 
+        std::string serUUID;
         std::string serName;
         int conv = 0;
-        bool success = accept.VerifyReplyAccept(str2, serName, conv);
+        bool success = accept.VerifyReplyAccept(str2, serUUID, serName, conv);
         ASSERT_TRUE(success);
+        ASSERT_EQ(serUUID, "uuid_service");
         ASSERT_EQ(serName, "service");
+        ASSERT_EQ(accept.nameC(), "clinet");
+        ASSERT_EQ(accept.nameS(), "service");
+        ASSERT_EQ(accept.uuidC(), "uuid_clinet");
+        ASSERT_EQ(accept.uuidS(), "uuid_service");
+        ASSERT_EQ(accept.conv(), i);
         ASSERT_EQ(conv, i);
     }
 }
@@ -31,15 +38,14 @@ TEST(Accept, fail)
 {
     Accept accept;
 
-    for (size_t i = 0; i < 1000; i++) {
-        std::string str = accept.CreateAcceptString("clinet", 8888);
+    std::string str = accept.CreateAcceptString("uuid_clinet", "clinet");
 
-        Accept acceptS;
-        std::string str2 = "32131";
+    Accept acceptS;
+    std::string str2 = "32131"; //这是一段不是json的字符串.
 
-        std::string serName;
-        int conv = 0;
-        bool success = accept.VerifyReplyAccept(str2, serName, conv);
-        ASSERT_FALSE(success);
-    }
+    std::string serUUID;
+    std::string serName;
+    int conv = 0;
+    bool success = accept.VerifyReplyAccept(str2, serUUID, serName, conv);
+    ASSERT_FALSE(success);
 }

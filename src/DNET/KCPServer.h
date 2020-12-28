@@ -5,6 +5,7 @@
 #include <map>
 
 #include "TCP/TCPServer.h"
+#include "KCPEvent.h"
 
 namespace dxlib {
 
@@ -87,6 +88,16 @@ class KCPServer
     void Close();
 
     /**
+     * 得到Accept的事件.
+     *
+     * @author daixian
+     * @date 2020/12/21
+     *
+     * @returns A reference to a Poco::BasicEvent<KCPEvent>
+     */
+    Poco::BasicEvent<KCPEventAccept>& EventAccept();
+
+    /**
      * 非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
      *
      * @author daixian
@@ -144,7 +155,7 @@ class KCPServer
     std::map<int, std::string> GetRemotes();
 
     /**
-     * 通过一个名字查询一个ConvID
+     * 通过一个UUID查询一个ConvID
      *
      * @author daixian
      * @date 2020/12/19

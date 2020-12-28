@@ -30,6 +30,9 @@ class KCPUser
     // 远程对象uuid.
     std::string uuid_remote;
 
+    // 远程对象name.
+    std::string name_remote;
+
     // 自己的UDPSocket,用于发送函数
     Poco::Net::DatagramSocket* socket = nullptr;
 

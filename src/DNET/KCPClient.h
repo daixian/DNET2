@@ -41,6 +41,16 @@ class KCPClient
     std::string name;
 
     /**
+     * 得到它的ConvID号.
+     *
+     * @author daixian
+     * @date 2020/12/28
+     *
+     * @returns An int.
+     */
+    int ConvID();
+
+    /**
      * 返回这个UUID.
      *
      * @author daixian
@@ -59,6 +69,26 @@ class KCPClient
      * @returns A std::string.
      */
     std::string SetUUID(const std::string& uuid);
+
+    /**
+     * 远端的uuid.
+     *
+     * @author daixian
+     * @date 2020/12/28
+     *
+     * @returns A std::string.
+     */
+    std::string RemoteUUID();
+
+    /**
+     * 远端的Name.
+     *
+     * @author daixian
+     * @date 2020/12/28
+     *
+     * @returns A std::string.
+     */
+    std::string RemoteName();
 
     /**
      * 向服务端发送一条认证字符串,然后等待服务器回复.

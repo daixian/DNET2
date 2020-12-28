@@ -64,7 +64,7 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
 class KCPClient::Impl
 {
   public:
-    Impl()
+    Impl(const std::string& name) : name(name)
     {
         receBuf.resize(8 * 1024);
 
@@ -93,29 +93,26 @@ class KCPClient::Impl
     // TCP的连接用于客户端连接tcp服务器
     TCPClient* tcpClient = nullptr;
 
-    //socket使用的buff ,最好大于1400吧
+    // socket使用的buff ,最好大于1400吧
     std::vector<char> receBuf;
 
-    //// 用于监听握手用的kcp对象,id号为0
-    //ikcpcb* kcpAccept = nullptr;
-
-    //是否是等待连接状态
+    // 是否是等待连接状态
     Accept* clientTempAccept = nullptr;
 
     // 远程对象列表
     ikcpcb* kcpRemote = nullptr;
 
-    /**
-     * Sends an accept
-     *
-     * @author daixian
-     * @date 2020/12/19
-     *
-     * @param  host The host.
-     * @param  port The port.
-     *
-     * @returns An int.
-     */
+    // 得到kcpRemote的KCPUser的指针
+    KCPUser* kcpUser()
+    {
+        if (kcpRemote == nullptr) {
+            return nullptr;
+        }
+
+        return (KCPUser*)kcpRemote->user;
+    }
+
+    //发送认证
     int SendAccept(const std::string& host, int port)
     {
         Close();
@@ -136,7 +133,7 @@ class KCPClient::Impl
             socket = new Poco::Net::DatagramSocket(sAddr); //使用和TCP端口相同的端口开始一个UDP接收
             socket->setBlocking(false);                    //它可以设置是否是阻塞
             clientTempAccept = new Accept();
-            std::string acceptStr = clientTempAccept->CreateAcceptString(uuid, 0); //自己的端口是无意义的
+            std::string acceptStr = clientTempAccept->CreateAcceptString(uuid, name); //创建一个认证的自字符串发给服务器
             return tcpClient->Send(acceptStr.c_str(), acceptStr.size());
         }
         return -1;
@@ -181,38 +178,46 @@ class KCPClient::Impl
         tcpClient->Receive(msgs);
         if (msgs.size() > 0) {
             std::string& acceptStr = msgs[0]; //只处理第一条(设计上应该只有一条)
-            std::string remoteName;
+            std::string uuidS;
+            std::string nameS;
             int conv;
 
-            clientTempAccept->VerifyReplyAccept(acceptStr.data(), remoteName, conv);
-            poco_assert(conv >= 0);
+            if (clientTempAccept->VerifyReplyAccept(acceptStr.data(), uuidS, nameS, conv)) {
+                poco_assert(conv >= 0);
 
-            Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
+                Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
 
-            KCPUser* kcpUser = new KCPUser(socket, conv);
-            kcpUser->accept = *clientTempAccept;
-            kcpUser->uuid_remote = remoteName;
-            kcpUser->remote = tcs->peerAddress(); //使用实际的远程端口就行了应该
+                KCPUser* kcpUser = new KCPUser(socket, conv);
+                kcpUser->accept = *clientTempAccept;
+                kcpUser->uuid_remote = uuidS;
+                kcpUser->name_remote = nameS;
+                kcpUser->remote = tcs->peerAddress(); //使用实际的远程端口就行了应该
 
-            LogI("KCPClient.TCPClientAcceptReceive():%s(%s:%d)远程通知来的conv=%d,认证成功!", remoteName.c_str(),
-                 kcpUser->remote.host().toString().c_str(),
-                 kcpUser->remote.port(), conv);
+                LogI("KCPClient.TCPClientAcceptReceive():%s(%s:%d)远程通知来的conv=%d,认证成功!", nameS.c_str(),
+                     kcpUser->remote.host().toString().c_str(),
+                     kcpUser->remote.port(), conv);
 
-            ikcpcb* kcp = ikcp_create(conv, kcpUser);
-            // 设置回调函数
-            kcp->output = kcpc_udp_output;
+                ikcpcb* kcp = ikcp_create(conv, kcpUser);
+                // 设置回调函数
+                kcp->output = kcpc_udp_output;
 
-            ikcp_nodelay(kcp, 1, 10, 2, 1);
-            //kcp->rx_minrto = 10;
-            //kcp->fastresend = 1;
-            kcpRemote = kcp; //添加这个新客户端
+                ikcp_nodelay(kcp, 1, 10, 2, 1);
+                //kcp->rx_minrto = 10;
+                //kcp->fastresend = 1;
 
-            //认证完成,关闭认证相关的tcp客户端(先不要关闭了)
-            delete clientTempAccept;
-            clientTempAccept = nullptr;
-            //tcpClient->Close();
-            //delete tcpClient;
-            //tcpClient = nullptr;
+                if (kcpRemote != nullptr) {
+                    LogW("KCPClient.TCPClientAcceptReceive():kcpRemote未清空,不应该发生这种情况!");
+                    delete kcpRemote;
+                }
+                kcpRemote = kcp; //添加这个新客户端
+
+                //认证完成,关闭认证相关的tcp客户端(先不要关闭了)
+                //tcpClient->Close();
+                //delete tcpClient;
+                //tcpClient = nullptr;
+                delete clientTempAccept;
+                clientTempAccept = nullptr;
+            }
         }
     }
 
@@ -316,12 +321,18 @@ class KCPClient::Impl
 
 KCPClient::KCPClient(const std::string& name) : name(name)
 {
-    _impl = new Impl();
+    _impl = new Impl(name);
 }
 
 KCPClient::~KCPClient()
 {
     delete _impl;
+}
+int KCPClient::ConvID()
+{
+    if (_impl->kcpRemote != nullptr)
+        return _impl->kcpRemote->conv;
+    return -1;
 }
 
 std::string KCPClient::UUID()
@@ -334,6 +345,24 @@ std::string KCPClient::SetUUID(const std::string& uuid)
     _impl->uuid = uuid;
     _impl->tcpClient->SetUUID(uuid);
     return _impl->uuid;
+}
+
+std::string KCPClient::RemoteUUID()
+{
+    KCPUser* user = _impl->kcpUser();
+    if (user == nullptr) {
+        return "";
+    }
+    return user->uuid_remote;
+}
+
+std::string KCPClient::RemoteName()
+{
+    KCPUser* user = _impl->kcpUser();
+    if (user == nullptr) {
+        return "";
+    }
+    return user->name_remote;
 }
 
 int KCPClient::Connect(const std::string& host, int port)

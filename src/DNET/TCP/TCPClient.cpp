@@ -36,7 +36,7 @@ class TCPClient::Impl
     }
 
     // 名字.
-    std::string name;
+    std::string name = "TCPClient";
 
     // 一个tcp的ID.
     int tcpID = -1;
@@ -53,7 +53,7 @@ class TCPClient::Impl
     // 是否已经连接了
     std::atomic_bool isConnected{false};
 
-    //接收用的buffer
+    // 接收用的buffer
     std::vector<char> receBuff;
 
     /**

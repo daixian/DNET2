@@ -15,13 +15,13 @@ class AcceptDto : XUEXUE_JSON_OBJECT
 
     std::string keyS;
 
-    int portC = 0;
+    std::string uuidC;
 
-    int portS = 0;
+    std::string uuidS;
 
-    int conv = 0;
+    int conv = -1;
 
-    XUEXUE_JSON_OBJECT_M7(nameC, nameS, keyC, keyS, portC, portS, conv)
+    XUEXUE_JSON_OBJECT_M7(nameC, nameS, keyC, keyS, uuidC, uuidS, conv)
 };
 
 class Accept::Impl
@@ -47,14 +47,14 @@ Accept::~Accept()
     delete _impl;
 }
 
-std::string Accept::CreateAcceptString(const std::string& name, int portC)
+std::string Accept::CreateAcceptString(const std::string& uuidC, const std::string& nameC)
 {
 
     Poco::Random rnd;
     rnd.seed();
 
-    _impl->dto.nameC = name;
-    _impl->dto.portC = portC;
+    _impl->dto.nameC = nameC;
+    _impl->dto.uuidC = uuidC;
     _impl->dto.keyC.clear();
 
     //生成一段16个字节的随机字符串
@@ -69,16 +69,16 @@ std::string Accept::CreateAcceptString(const std::string& name, int portC)
     return xuexue::json::JsonMapper::toJson(_impl->dto);
 }
 
-std::string Accept::ReplyAcceptString(const std::string& acceptString, const std::string& name, int conv, int portS)
+std::string Accept::ReplyAcceptString(const std::string& acceptString, const std::string& uuidS, const std::string& nameS, int conv)
 {
     _impl->dto = xuexue::json::JsonMapper::toObject<AcceptDto>(acceptString);
-    if (_impl->dto.keyC.empty() || _impl->dto.nameC.empty()) {
+    if (_impl->dto.keyC.empty() || _impl->dto.uuidC.empty()) {
         //如果无法解析json
         return "";
     }
 
-    _impl->dto.nameS = name;
-    _impl->dto.portS = portS;
+    _impl->dto.nameS = nameS;
+    _impl->dto.uuidS = uuidS;
     _impl->dto.conv = conv;
     _impl->dto.keyS.clear();
 
@@ -98,7 +98,7 @@ std::string Accept::ReplyAcceptString(const std::string& acceptString, const std
     return xuexue::json::JsonMapper::toJson(_impl->dto);
 }
 
-bool Accept::VerifyReplyAccept(const std::string& replyAcceptString, std::string& serName, int& conv)
+bool Accept::VerifyReplyAccept(const std::string& replyAcceptString, std::string& uuidS, std::string& nameS, int& conv)
 {
     if (replyAcceptString.empty()) {
         _impl->isVerified = false;
@@ -109,15 +109,16 @@ bool Accept::VerifyReplyAccept(const std::string& replyAcceptString, std::string
 
     bool isSuccess = false;
     if (serverDto.nameC == _impl->dto.nameC &&
-        serverDto.portC == _impl->dto.portC &&
+        serverDto.uuidC == _impl->dto.uuidC &&
         serverDto.keyC == _impl->dto.keyC) {
         isSuccess = true;
         _impl->dto.keyS = serverDto.keyS;
         _impl->dto.nameS = serverDto.nameS;
-        _impl->dto.portS = serverDto.portS;
+        _impl->dto.uuidS = serverDto.uuidS;
         _impl->dto.conv = serverDto.conv;
 
-        serName = serverDto.nameS;
+        uuidS = serverDto.uuidS;
+        nameS = serverDto.nameS;
         conv = serverDto.conv;
     }
 
@@ -128,6 +129,10 @@ bool Accept::VerifyReplyAccept(const std::string& replyAcceptString, std::string
 bool Accept::isVerified()
 {
     return _impl->isVerified;
+}
+int Accept::conv()
+{
+    return _impl->dto.conv;
 }
 
 std::string Accept::nameC()
@@ -140,14 +145,24 @@ std::string Accept::nameS()
     return _impl->dto.nameS;
 }
 
-int Accept::portC()
+std::string Accept::uuidC()
 {
-    return _impl->dto.portC;
+    return _impl->dto.uuidC;
 }
 
-int Accept::portS()
+std::string Accept::uuidS()
 {
-    return _impl->dto.portS;
+    return _impl->dto.uuidS;
+}
+
+std::string Accept::keyC()
+{
+    return _impl->dto.keyC;
+}
+
+std::string Accept::keyS()
+{
+    return _impl->dto.keyS;
 }
 
 } // namespace dxlib

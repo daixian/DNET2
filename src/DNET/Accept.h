@@ -25,12 +25,12 @@ class Accept
      * @author daixian
      * @date 2020/12/19
      *
-     * @param  name  客户端自己的名字.
-     * @param  protC The prot c.
+     * @param  uuidC 客户端的uuid.
+     * @param  nameC 客户端自己的名字.
      *
      * @returns The accept string.
      */
-    std::string CreateAcceptString(const std::string& name, int protC);
+    std::string CreateAcceptString(const std::string& uuidC, const std::string& nameC);
 
     /**
      * 对一个随机的认证字符串进行回应.(服务器端调用)
@@ -39,13 +39,13 @@ class Accept
      * @date 2020/12/19
      *
      * @param  acceptString 收到的认证字符串.
-     * @param  name         自己的名字.
+     * @param  uuidS        uuid(服务器端).
+     * @param  nameS        自己的名字(服务器端).
      * @param  conv         一个用于表示会话编号的整数.
-     * @param  protS        The prot s.
      *
      * @returns 如果认证失败返回空字符串.
      */
-    std::string ReplyAcceptString(const std::string& acceptString, const std::string& name, int conv, int protS);
+    std::string ReplyAcceptString(const std::string& acceptString, const std::string& uuidS, const std::string& nameS, int conv);
 
     /**
      * 校验服务端的返回,之后使用协商的conv进行连接.
@@ -54,12 +54,13 @@ class Accept
      * @date 2020/12/19
      *
      * @param          replyAcceptString The reply accept string.
-     * @param [in,out] serName           服务器端的名字.
+     * @param [in,out] uuidS             服务器端的uuid.
+     * @param [in,out] nameS             服务器端的名字.
      * @param [in,out] conv              协商的conv.
      *
-     * @returns True if it succeeds, false if it fails.
+     * @returns 校验成功返回true.
      */
-    bool VerifyReplyAccept(const std::string& replyAcceptString, std::string& serName, int& conv);
+    bool VerifyReplyAccept(const std::string& replyAcceptString, std::string& uuidS, std::string& nameS, int& conv);
 
     /**
      * 是否已经校验过了.
@@ -72,7 +73,17 @@ class Accept
     bool isVerified();
 
     /**
-     * Name c
+     * 通信ID
+     *
+     * @author daixian
+     * @date 2020/12/28
+     *
+     * @returns An int.
+     */
+    int conv();
+
+    /**
+     * 客户端的Name.
      *
      * @author daixian
      * @date 2020/12/19
@@ -82,7 +93,7 @@ class Accept
     std::string nameC();
 
     /**
-     * Name s
+     * 服务器端的Name.
      *
      * @author daixian
      * @date 2020/12/19
@@ -92,24 +103,44 @@ class Accept
     std::string nameS();
 
     /**
-     * Port c
+     * 客户端的uuid.
      *
      * @author daixian
      * @date 2020/12/23
      *
      * @returns An int.
      */
-    int portC();
+    std::string uuidC();
 
     /**
-     * Port s
+     * 服务器端的uuid.
      *
      * @author daixian
      * @date 2020/12/23
      *
      * @returns An int.
      */
-    int portS();
+    std::string uuidS();
+
+    /**
+     * 客户端生成的随机key.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns An int.
+     */
+    std::string keyC();
+
+    /**
+     * 服务器端生成的随机key.
+     *
+     * @author daixian
+     * @date 2020/12/23
+     *
+     * @returns An int.
+     */
+    std::string keyS();
 
   private:
     class Impl;
