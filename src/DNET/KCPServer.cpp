@@ -192,7 +192,9 @@ class KCPServer::Impl
             int tcpID = kvp.first;
 
             std::string& acceptStr = kvp.second[0]; //只处理第一条
-            int conv = GetConv();
+
+            //int conv = GetConv(); 这里改为使用tcpid算了
+            int conv = tcpID;
             KCPUser* kcpUser = new KCPUser(socket, conv);                                                //准备创建新的客户端用户
             std::string replyStr = kcpUser->accept.ReplyAcceptString(acceptStr, uuid, conv, this->port); //使用这个新的客户端用户做accept
             if (replyStr.empty()) {

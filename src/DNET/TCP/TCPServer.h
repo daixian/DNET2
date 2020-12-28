@@ -8,6 +8,7 @@
 #include "Poco/Delegate.h"
 
 #include "TCPEvent.h"
+#include "TCPClient.h"
 
 namespace dxlib {
 
@@ -162,6 +163,26 @@ class TCPServer
      * @returns Poco::Net::StreamSocket类型的指针.
      */
     void* GetClientSocket(int tcpID);
+
+    /**
+     * Remote count
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @returns An int.
+     */
+    int RemoteCount();
+
+    /**
+     * 得到当前所有记录的客户端Remote
+     *
+     * @author daixian
+     * @date 2020/12/19
+     *
+     * @returns The remotes.
+     */
+    std::map<int, TCPClient*> GetRemotes();
 
   private:
     class Impl;

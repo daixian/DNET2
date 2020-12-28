@@ -185,7 +185,7 @@ class KCPClient::Impl
             int conv;
 
             clientTempAccept->VerifyReplyAccept(acceptStr.data(), remoteName, conv);
-            poco_assert(conv > 0);
+            poco_assert(conv >= 0);
 
             Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
 

@@ -31,10 +31,10 @@ class ClientManager
     int AddClient(Poco::Net::StreamSocket& client)
     {
         TCPClient* tcobj = new TCPClient();
-        TCPClient::CreateWithServer(_clientCount, &client, *tcobj);
+        TCPClient::CreateWithServer(_clientCount, &client, *tcobj); //这个函数传入一个tcpID
         mClients[_clientCount] = tcobj;
         _clientCount++; //永远递增
-        return _clientCount - 1;
+        return tcobj->TcpID();
     }
 
     /**
@@ -85,11 +85,12 @@ class ClientManager
             delete kvp.second;
         }
         mClients.clear();
-        _clientCount = 0;
+        _clientCount = 1;
     }
 
   private:
-    int _clientCount = 0;
+    // 用于分配tcpID,id从1开始,0保留
+    int _clientCount = 1;
 };
 
 } // namespace dxlib

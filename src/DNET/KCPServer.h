@@ -134,7 +134,7 @@ class KCPServer
     int RemoteCount();
 
     /**
-     * 得到当前所有记录的Remote名字(UUID).
+     * 得到当前所有记录的Remote名字(UUID).map的key为ConvID.
      *
      * @author daixian
      * @date 2020/12/19

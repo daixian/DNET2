@@ -314,4 +314,15 @@ void* TCPServer::GetClientSocket(int tcpID)
     }
     return nullptr;
 }
+int TCPServer::RemoteCount()
+{
+    return _impl->clientManager.mClients.size();
+}
+
+std::map<int, TCPClient*> TCPServer::GetRemotes()
+{
+
+    return _impl->clientManager.mClients;
+}
+
 } // namespace dxlib
