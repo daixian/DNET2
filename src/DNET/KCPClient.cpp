@@ -176,8 +176,9 @@ class KCPClient::Impl
 
         std::vector<std::string> msgs;
         tcpClient->Receive(msgs);
-        if (msgs.size() > 0) {
-            std::string& acceptStr = msgs[0]; //只处理第一条(设计上应该只有一条)
+        //遍历所有收到的消息
+        for (size_t msgIndex = 0; msgIndex < msgs.size(); msgIndex++) {
+            std::string& acceptStr = msgs[msgIndex]; //只处理第一条(设计上应该只有一条)
             std::string uuidS;
             std::string nameS;
             int conv;
@@ -188,7 +189,7 @@ class KCPClient::Impl
                 Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
 
                 KCPUser* kcpUser = new KCPUser(socket, conv);
-                kcpUser->accept = *clientTempAccept;
+                kcpUser->accept = *clientTempAccept; //拷贝accept对象
                 kcpUser->uuid_remote = uuidS;
                 kcpUser->name_remote = nameS;
                 kcpUser->remote = tcs->peerAddress(); //使用实际的远程端口就行了应该
@@ -217,6 +218,7 @@ class KCPClient::Impl
                 //tcpClient = nullptr;
                 delete clientTempAccept;
                 clientTempAccept = nullptr;
+                break;
             }
         }
     }
