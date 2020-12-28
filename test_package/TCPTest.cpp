@@ -81,9 +81,10 @@ TEST(TCPServer, sendBytes)
     std::string msg = "1234567890";
     int res = client.Send(msg.c_str(), msg.size());
 
+    int tcpId = server.GetRemotes().begin()->first;
     {
         std::map<int, std::vector<std::vector<char>>> msgs;
-        server.WaitAvailable(0); //只有一个客户端,那么id应该为0
+        server.WaitAvailable(tcpId); //只有一个客户端,那么id应该为0
         server.Receive(msgs);
         if (!msg.empty())
             for (auto& kvp : msgs) {
@@ -122,10 +123,11 @@ TEST(TCPServer, sendBytes_localhost)
 
     std::string msg = "1234567890";
     int res = client.Send(msg.c_str(), msg.size());
+    int tcpId = server.GetRemotes().begin()->first;
 
     {
         std::map<int, std::vector<std::vector<char>>> msgs;
-        server.WaitAvailable(0); //只有一个客户端,那么id应该为0
+        server.WaitAvailable(tcpId); //只有一个客户端,那么id应该为0
         server.Receive(msgs);
         if (!msg.empty())
             for (auto& kvp : msgs) {
@@ -162,9 +164,10 @@ TEST(TCPServer, sendText)
 
     std::string msg = "1234567890";
     int res = client.Send(msg.c_str(), msg.size());
+    int tcpId = server.GetRemotes().begin()->first;
 
     std::map<int, std::vector<std::string>> msgs;
-    server.WaitAvailable(0); //只有一个客户端,那么id应该为0
+    server.WaitAvailable(tcpId); //只有一个客户端,那么id应该为0
     server.Receive(msgs);
     if (!msg.empty())
         for (auto& kvp : msgs) {
@@ -206,9 +209,10 @@ TEST(TCPServer, sendText_128Client)
 
     //服务器接收
     {
-        for (size_t i = 0; i < clients.size(); i++) {
-            server.WaitAvailable(i); //等待所有的客户端...
+        for (auto& kvp : server.GetRemotes()) {
+            server.WaitAvailable(kvp.first); //等待所有的客户端...
         }
+
         std::map<int, std::vector<std::string>> msgs;
         server.Receive(msgs);
         if (!msg.empty()) {
@@ -254,11 +258,12 @@ TEST(TCPServer, sendText2)
     std::string msg2 = "abcdefghijklmn";
     res = client.Send(msg2.c_str(), msg2.size());
 
+    int tcpId = server.GetRemotes().begin()->first;
     {
         int receCount = 0;
         while (receCount < 2) {
             std::map<int, std::vector<std::string>> msgs;
-            server.WaitAvailable(0); //只有一个客户端,那么id应该为0
+            server.WaitAvailable(tcpId); //只有一个客户端,那么id应该为0
             server.Receive(msgs);
             if (!msg.empty())
                 for (auto& kvp : msgs) {
