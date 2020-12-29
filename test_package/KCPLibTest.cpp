@@ -1,4 +1,4 @@
-//=====================================================================
+﻿//=====================================================================
 //
 // test.cpp - kcp 测试用例
 //
@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 #include "KCPLibTest.h"
-#include "DNET/kcp/ikcp.cpp"
+#include "DNET/kcp/ikcp.h"
 #include "gtest/gtest.h"
 
 // 模拟网络

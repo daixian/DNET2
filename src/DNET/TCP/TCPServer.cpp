@@ -174,7 +174,7 @@ class TCPServer::Impl
             return acceptRunnable->isStarted; //这个是监听已经启动
     }
 
-    int Send(int tcpID, const char* data, int len)
+    int Send(int tcpID, const char* data, size_t len)
     {
         TCPClient* client = clientManager.GetClient(tcpID);
         if (client == nullptr) {
@@ -276,7 +276,7 @@ void TCPServer::WaitStarted()
     }
 }
 
-int TCPServer::Send(int tcpID, const char* data, int len)
+int TCPServer::Send(int tcpID, const char* data, size_t len)
 {
     return _impl->Send(tcpID, data, len);
 }

@@ -120,7 +120,7 @@ class KCPServer
      *
      * @returns 正常发送成功返回0.
      */
-    int Send(int conv, const char* data, int len);
+    int Send(int conv, const char* data, size_t len);
 
     /**
      * Wait send count

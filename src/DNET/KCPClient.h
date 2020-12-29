@@ -161,7 +161,7 @@ class KCPClient
      *
      * @returns 正常发送成功返回0.
      */
-    int Send(const char* data, int len);
+    int Send(const char* data, size_t len);
 
     /**
      * 当前等待发送的消息计数.如果这个数量太多,那么已经拥塞.

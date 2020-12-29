@@ -323,7 +323,7 @@ class KCPServer::Impl
      *
      * @returns An int.
      */
-    int Send(int conv, const char* data, int len)
+    int Send(int conv, const char* data, size_t len)
     {
         if (socket == nullptr) {
             LogE("KCPServer.Send():%s 还没有初始化,不能发送!", name);
@@ -335,7 +335,7 @@ class KCPServer::Impl
         }
 
         ikcpcb* kcp = remotes[conv];
-        int res = ikcp_send(kcp, data, len);
+        int res = ikcp_send(kcp, data, (int)len);
         if (res < 0) {
             LogE("KCPServer.Send():发送异常返回%d", res);
         }
@@ -412,7 +412,7 @@ int KCPServer::Receive(std::map<int, std::vector<std::string>>& msgs)
     return msgs.size();
 }
 
-int KCPServer::Send(int conv, const char* data, int len)
+int KCPServer::Send(int conv, const char* data, size_t len)
 {
     int res = _impl->Send(conv, data, len);
     _impl->Update();

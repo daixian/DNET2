@@ -100,7 +100,7 @@ class TCPClient
      *
      * @returns 返回发送成功的长度(打包后的).
      */
-    int Send(const char* data, int len);
+    int Send(const char* data, size_t len);
 
     /**
      * 可读取(接收)的数据数.

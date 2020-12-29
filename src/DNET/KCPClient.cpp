@@ -293,14 +293,14 @@ class KCPClient::Impl
         return ikcp_waitsnd(kcpRemote);
     }
 
-    int Send(const char* data, int len)
+    int Send(const char* data, size_t len)
     {
         if (socket == nullptr || kcpRemote == nullptr) {
             LogE("KCPClient.Send():%s 还没有初始化,不能发送!", name.c_str());
             return -1;
         }
 
-        int res = ikcp_send(kcpRemote, data, len);
+        int res = ikcp_send(kcpRemote, data, (int)len);
         if (res < 0) {
             LogE("KCPClient.Send():发送异常返回 res=%d", res);
         }
@@ -421,7 +421,7 @@ int KCPClient::Receive(std::vector<std::string>& msgs)
     return msgs.size();
 }
 
-int KCPClient::Send(const char* data, int len)
+int KCPClient::Send(const char* data, size_t len)
 {
     int res = _impl->Send(data, len);
     _impl->Update();

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifndef __TEST_H__
 #define __TEST_H__
@@ -127,7 +127,7 @@ public:
 	int random() {
 		int x, i;
 		if (seeds.size() == 0) return 0;
-		if (size == 0) { 
+		if (size == 0) {
 			for (i = 0; i < (int)seeds.size(); i++) {
 				seeds[i] = i;
 			}
@@ -156,9 +156,9 @@ public:
 	// lostrate: 往返一周丢包率的百分比，默认 10%
 	// rttmin：rtt最小值，默认 60
 	// rttmax：rtt最大值，默认 125
-	LatencySimulator(int lostrate = 10, int rttmin = 60, int rttmax = 125, int nmax = 1000): 
+	LatencySimulator(int lostrate = 10, int rttmin = 60, int rttmax = 125, int nmax = 1000):
 		r12(100), r21(100) {
-		current = iclock();		
+		current = iclock();
 		this->lostrate = lostrate / 2;	// 上面数据是往返丢包率，单程除以2
 		this->rttmin = rttmin / 2;
 		this->rttmax = rttmax / 2;

@@ -144,14 +144,14 @@ class TCPClient::Impl
      *
      * @returns An int.
      */
-    int Send(const char* data, int len)
+    int Send(const char* data, size_t len)
     {
         if (!isConnected) {
             return -1;
         }
         //数据打包
         std::vector<char> package;
-        packet.Pack(data, len, package);
+        packet.Pack(data, (int)len, package);
 
         int sendCount = 0;
         for (size_t i = 0; i < 10; i++) {
@@ -308,7 +308,7 @@ int TCPClient::Connect(const std::string& host, int port)
     return _impl->Connect(host, port);
 }
 
-int TCPClient::Send(const char* data, int len)
+int TCPClient::Send(const char* data, size_t len)
 {
     return _impl->Send(data, len);
 }

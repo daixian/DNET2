@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+ï»¿#include "gtest/gtest.h"
 #include "DNET/KCP.h"
 #include "DNET/TCP/Protocol/FastPacket.h"
 #include <thread>
@@ -32,7 +32,7 @@ TEST(FastPacket, unpackLen1)
 
     ASSERT_EQ(packetedData.size(), data.size() + 5);
 
-    // Ò»¸öÒ»¸öµÄÍùÀïÃæÌí¼ÓÊı¾İÈ¥¼ì²ìÊÇ·ñÄÜ¹»Õı³£½â°ü
+    // ä¸€ä¸ªä¸€ä¸ªçš„å¾€é‡Œé¢æ·»åŠ æ•°æ®å»æ£€å¯Ÿæ˜¯å¦èƒ½å¤Ÿæ­£å¸¸è§£åŒ…
     int unPackLen = 1;
     for (size_t i = 0; i < packetedData.size(); i++) {
         std::vector<std::vector<char>> result;
@@ -46,7 +46,7 @@ TEST(FastPacket, unpackLen1)
         }
     }
 
-    ASSERT_FALSE(pack.isUnpackCached()); //Õâ±ê¼Ç×ÅÒÑ¾­½âÎöµ½ÁËÒ»´ÎÊı¾İÁË
+    ASSERT_FALSE(pack.isUnpackCached()); //è¿™æ ‡è®°ç€å·²ç»è§£æåˆ°äº†ä¸€æ¬¡æ•°æ®äº†
 }
 
 TEST(FastPacket, unpackLenMany)
@@ -59,7 +59,7 @@ TEST(FastPacket, unpackLenMany)
 
     ASSERT_EQ(packetedData.size(), data.size() + 5);
 
-    //Ã¿´Î´«ÈëµÄunPackLen²»Í¬,½øĞĞn´ÎÊÔÑé
+    //æ¯æ¬¡ä¼ å…¥çš„unPackLenä¸åŒ,è¿›è¡Œnæ¬¡è¯•éªŒ
     for (size_t unPackLen = 1; unPackLen <= packetedData.size(); unPackLen++) {
         std::vector<std::vector<char>> result;
         int i = 0;
@@ -74,7 +74,7 @@ TEST(FastPacket, unpackLenMany)
             }
         }
 
-        ASSERT_FALSE(pack.isUnpackCached()); //Õâ±ê¼Ç×ÅÒÑ¾­½âÎöµ½ÁËÒ»´ÎÊı¾İÁË
+        ASSERT_FALSE(pack.isUnpackCached()); //è¿™æ ‡è®°ç€å·²ç»è§£æåˆ°äº†ä¸€æ¬¡æ•°æ®äº†
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result[0].size(), data.size());
         for (size_t j = 0; j < result[0].size(); j++) {
@@ -93,7 +93,7 @@ TEST(FastPacket, unpackLenManyString)
 
     ASSERT_EQ(packetedData.size(), data.size() + 5);
 
-    //Ã¿´Î´«ÈëµÄunPackLen²»Í¬,½øĞĞn´ÎÊÔÑé
+    //æ¯æ¬¡ä¼ å…¥çš„unPackLenä¸åŒ,è¿›è¡Œnæ¬¡è¯•éªŒ
     for (size_t unPackLen = 1; unPackLen <= packetedData.size(); unPackLen++) {
         std::vector<std::string> result;
         int i = 0;
@@ -108,7 +108,7 @@ TEST(FastPacket, unpackLenManyString)
             }
         }
 
-        ASSERT_FALSE(pack.isUnpackCached()); //Õâ±ê¼Ç×ÅÒÑ¾­½âÎöµ½ÁËÒ»´ÎÊı¾İÁË
+        ASSERT_FALSE(pack.isUnpackCached()); //è¿™æ ‡è®°ç€å·²ç»è§£æåˆ°äº†ä¸€æ¬¡æ•°æ®äº†
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result[0].size(), data.size());
         ASSERT_EQ(result[0], data);
