@@ -56,6 +56,9 @@ class TCPClient::Impl
     // 接收用的buffer
     std::vector<char> receBuff;
 
+    // 是否已经网络错误了
+    bool isError = false;
+
     /**
      * Connects
      *
@@ -166,39 +169,6 @@ class TCPClient::Impl
         return sendCount;
     }
 
-    /**
-     * Receives the given msgs
-     *
-     * @author daixian
-     * @date 2020/12/22
-     *
-     * @param [out] msgs The msgs.
-     *
-     * @returns 接收到的数据条数.
-     */
-    int Receive(std::vector<std::vector<char>>& msgs)
-    {
-        msgs.clear();
-        if (!isConnected) {
-            return -1;
-        }
-
-        while (true) {
-            if (socket.available() > 0) {
-                int res = socket.receiveBytes(receBuff.data(), (int)receBuff.size());
-                packet.Unpack(receBuff.data(), res, msgs);
-                if (res <= 0) {
-                    break;
-                }
-            }
-            else {
-                break;
-            }
-        }
-
-        return (int)msgs.size();
-    }
-
     int Available()
     {
         if (!isConnected) {
@@ -218,11 +188,54 @@ class TCPClient::Impl
      *
      * @returns 接收到的数据条数.
      */
+    int Receive(std::vector<std::vector<char>>& msgs)
+    {
+        msgs.clear();
+        if (!isConnected) {
+            return -1;
+        }
+
+        if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
+            LogE("TCPClient.Receive():poll到了异常!");
+            isError = true;
+        }
+
+        while (true) {
+            if (socket.available() > 0) {
+                int res = socket.receiveBytes(receBuff.data(), (int)receBuff.size());
+                packet.Unpack(receBuff.data(), res, msgs);
+                if (res <= 0) {
+                    break;
+                }
+            }
+            else {
+                break;
+            }
+        }
+
+        return (int)msgs.size();
+    }
+
+    /**
+     * Receives the given msgs
+     *
+     * @author daixian
+     * @date 2020/12/22
+     *
+     * @param [out] msgs The msgs.
+     *
+     * @returns 接收到的数据条数.
+     */
     int Receive(std::vector<std::string>& msgs)
     {
         msgs.clear();
         if (!isConnected) {
             return -1;
+        }
+
+        if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
+            LogE("TCPClient.Receive():poll到了异常!");
+            isError = true;
         }
 
         while (true) {
@@ -301,6 +314,11 @@ std::string TCPClient::SetUUID(const std::string& uuid)
 void TCPClient::Close()
 {
     return _impl->Close();
+}
+
+bool TCPClient::isError()
+{
+    return _impl->isError;
 }
 
 int TCPClient::Connect(const std::string& host, int port)

@@ -77,6 +77,16 @@ class TCPClient
     void Close();
 
     /**
+     * 是否已经网络异常了.
+     *
+     * @author daixian
+     * @date 2020/12/30
+     *
+     * @returns True if error, false if not.
+     */
+    bool isError();
+
+    /**
      * 连接主机.
      *
      * @author daixian

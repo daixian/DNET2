@@ -67,6 +67,36 @@ using Poco::Net::StreamSocket;
 //    }
 //}
 
+TEST(TCPServer, OpenClose)
+{
+    TCPServer server("server", "0.0.0.0", 8341);
+    server.Start();
+    server.WaitStarted();
+
+    TCPClient client;
+    client.Connect("127.0.0.1", 8341);
+
+    while (server.GetRemotes().empty()) {
+        this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    client.Close();
+
+    int tcpId = server.GetRemotes().begin()->first;
+    {
+        std::map<int, std::vector<std::vector<char>>> msgs;
+        server.Receive(msgs);
+        if (!msgs.empty())
+            for (auto& kvp : msgs) {
+                LogI("服务器收到了客户端数据!");
+            }
+
+        server.Receive(msgs); //第二次调用接收就会清理客户端
+    }
+    ASSERT_TRUE(server.GetRemotes().empty());
+
+    server.Close();
+}
+
 TEST(TCPServer, sendBytes)
 {
     TCPServer server("server", "0.0.0.0", 8341);
