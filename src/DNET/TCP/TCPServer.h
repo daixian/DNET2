@@ -28,6 +28,9 @@ class TCPServer
     // 端口.
     int port = -1;
 
+    // 用户扩展
+    void* user = nullptr;
+
     /**
      * 返回这个服务端的UUID.
      *
@@ -91,6 +94,16 @@ class TCPServer
      * @returns A reference to a Poco::BasicEvent<TCPEvent>
      */
     Poco::BasicEvent<TCPEventAccept>& EventAccept();
+
+    /**
+     * 得到关闭的事件.
+     *
+     * @author daixian
+     * @date 2020/12/21
+     *
+     * @returns A reference to a Poco::BasicEvent<TCPEvent>
+     */
+    Poco::BasicEvent<TCPEventClose>& EventClose();
 
     /**
      * 非阻塞的发送一段数据.正常发送成功返回0.

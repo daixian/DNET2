@@ -40,6 +40,9 @@ class KCPClient
     // 自己的服务器名字
     std::string name;
 
+    // 用户扩展
+    void* user = nullptr;
+
     /**
      * 得到它的ConvID号.
      *

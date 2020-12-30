@@ -51,6 +51,9 @@ class KCPServer
     // 端口.
     int port = -1;
 
+    // 用户扩展
+    void* user = nullptr;
+
     /**
      * 返回这个服务端的UUID.
      *

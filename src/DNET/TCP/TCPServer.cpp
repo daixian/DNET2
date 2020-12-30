@@ -57,9 +57,9 @@ class TCPAcceptRunnable : public Poco::Runnable
                     Poco::Net::StreamSocket streamSocket = socket->acceptConnection(); //这个函数是阻塞的
                     streamSocket.setBlocking(false);
                     int tcpID = clientManager->AddClient(streamSocket); //添加这个用户
-                    TCPEventAccept msg(tcpID);
                     LogI("TCPAcceptRunnable.run():新连接来了一个客户端%d", tcpID);
-                    eventAccept->notify(this, msg); //发出这个事件消息
+
+                    eventAccept->notify(this, TCPEventAccept(tcpID)); //发出这个事件消息
                 }
                 else {
                     isStarted = true; //标记已经启动了
@@ -125,6 +125,9 @@ class TCPServer::Impl
     // 用户连接进来了的事件.
     Poco::BasicEvent<TCPEventAccept> eventAccept;
 
+    // 客户端关闭的事件
+    Poco::BasicEvent<TCPEventClose> eventClose;
+
     // 客户端记录.
     ClientManager clientManager;
 
@@ -147,6 +150,9 @@ class TCPServer::Impl
 
     void Close()
     {
+        if (!IsStarted()) //如果还没启动那么直接返回
+            return;
+
         //关闭所有客户端
         clientManager.Clear();
 
@@ -164,6 +170,8 @@ class TCPServer::Impl
             delete acceptRunnable;
             acceptRunnable = nullptr;
         }
+
+        eventClose.notify(this, TCPEventClose());
     }
 
     bool IsStarted()
@@ -303,6 +311,11 @@ int TCPServer::Send(int tcpID, const char* data, size_t len)
 Poco::BasicEvent<TCPEventAccept>& TCPServer::EventAccept()
 {
     return _impl->eventAccept;
+}
+
+Poco::BasicEvent<TCPEventClose>& TCPServer::EventClose()
+{
+    return _impl->eventClose;
 }
 
 int TCPServer::Available(int tcpID)

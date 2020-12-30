@@ -26,6 +26,9 @@ class TCPClient
 
     ~TCPClient();
 
+    // 用户扩展
+    void* user = nullptr;
+
     /**
      * 服务器创建一个客户端.
      *
@@ -167,6 +170,26 @@ class TCPClient
      * @returns Poco::Net::StreamSocket类型的指针.
      */
     void* Socket();
+
+    /**
+     * 得到Accept的事件.
+     *
+     * @author daixian
+     * @date 2020/12/21
+     *
+     * @returns A reference to a Poco::BasicEvent<TCPEvent>
+     */
+    Poco::BasicEvent<TCPEventAccept>& EventConnect();
+
+    /**
+     * 得到关闭的事件.
+     *
+     * @author daixian
+     * @date 2020/12/21
+     *
+     * @returns A reference to a Poco::BasicEvent<TCPEvent>
+     */
+    Poco::BasicEvent<TCPEventClose>& EventClose();
 
   private:
     class Impl;

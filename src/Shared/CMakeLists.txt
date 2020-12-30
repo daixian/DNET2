@@ -9,6 +9,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(WIN32)
     add_definitions(-D _WINDOWS)
     add_definitions(-D _USERDLL)
+
+    add_definitions(-D DNET_DLL_EXPORTS)
+    
 endif()
 
 # 先自动搜索文件添加算了

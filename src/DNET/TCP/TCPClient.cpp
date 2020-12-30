@@ -59,6 +59,12 @@ class TCPClient::Impl
     // 是否已经网络错误了
     bool isError = false;
 
+    // 用户连接进来了的事件.
+    Poco::BasicEvent<TCPEventAccept> eventConnect;
+
+    // 客户端关闭的事件
+    Poco::BasicEvent<TCPEventClose> eventClose;
+
     /**
      * Connects
      *
@@ -114,6 +120,7 @@ class TCPClient::Impl
         socket.setNoDelay(true);
         socket.setBlocking(false);
 
+        eventConnect.notify(this, TCPEventAccept(0));
         return 0;
     }
 
@@ -133,6 +140,8 @@ class TCPClient::Impl
             }
 
             isConnected = false;
+
+            eventClose.notify(this, TCPEventClose());
         }
     }
 
@@ -366,4 +375,15 @@ void* TCPClient::Socket()
 {
     return &_impl->socket;
 }
+
+Poco::BasicEvent<TCPEventAccept>& TCPClient::EventConnect()
+{
+    return _impl->eventConnect;
+}
+
+Poco::BasicEvent<TCPEventClose>& TCPClient::EventClose()
+{
+    return _impl->eventClose;
+}
+
 } // namespace dxlib

@@ -21,4 +21,17 @@ class TCPEventAccept
     int tcpID = 0;
 };
 
+/**
+ * 当前对象关闭.
+ *
+ * @author daixian
+ * @date 2020/12/21
+ */
+class TCPEventClose
+{
+  public:
+    TCPEventClose() {}
+    ~TCPEventClose() {}
+};
+
 } // namespace dxlib
