@@ -236,6 +236,7 @@ class TCPClient::Impl
         if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
             LogE("TCPClient.Receive():poll到了异常!");
             isError = true;
+            return -1; //网络出错那么就不接收算了
         }
 
         while (true) {

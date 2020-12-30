@@ -209,8 +209,7 @@ class TCPServer::Impl
     {
         msgs.clear();
 
-        std::map<int, TCPClient*>::iterator itr;
-        for (itr = clientManager.mClients.begin(); itr != clientManager.mClients.end(); itr++) {
+        for (auto itr = clientManager.mClients.begin(); itr != clientManager.mClients.end();) {
             std::vector<std::vector<char>> clientMsgs;
             if (itr->second->Receive(clientMsgs) > 0) {
                 msgs[itr->first] = clientMsgs;
@@ -219,16 +218,13 @@ class TCPServer::Impl
             //清理出错的客户端
             if (itr->second->isError()) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
-                clientManager.mClients.erase(itr--);
+                itr = clientManager.mClients.erase(itr);
+            }
+            else {
+                itr++;
             }
         }
 
-        //for (auto& kvp : clientManager.mClients) {
-        //    std::vector<std::vector<char>> clientMsgs;
-        //    if (kvp.second->Receive(clientMsgs) > 0) {
-        //        msgs[kvp.first] = clientMsgs;
-        //    }
-        //}
         return (int)msgs.size();
     }
 
@@ -236,8 +232,7 @@ class TCPServer::Impl
     {
         msgs.clear();
 
-        std::map<int, TCPClient*>::iterator itr;
-        for (itr = clientManager.mClients.begin(); itr != clientManager.mClients.end(); itr++) {
+        for (auto itr = clientManager.mClients.begin(); itr != clientManager.mClients.end();) {
             std::vector<std::string> clientMsgs;
             if (itr->second->Receive(clientMsgs) > 0) {
                 msgs[itr->first] = clientMsgs;
@@ -246,16 +241,12 @@ class TCPServer::Impl
             //清理出错的客户端
             if (itr->second->isError()) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
-                clientManager.mClients.erase(itr--);
+                itr = clientManager.mClients.erase(itr);
+            }
+            else {
+                itr++;
             }
         }
-
-        //for (auto& kvp : clientManager.mClients) {
-        //    std::vector<std::string> clientMsgs;
-        //    if (kvp.second->Receive(clientMsgs) > 0) {
-        //        msgs[kvp.first] = clientMsgs;
-        //    }
-        //}
         return (int)msgs.size();
     }
 };
