@@ -46,7 +46,7 @@ enum class DNetError
 };
 
 // 字符串消息的处理回调
-typedef void (*MessageProcCallback)(int id, const char* message);
+typedef void (*MessageProcCallback)(void* sender, int id, const char* message);
 
 /**
  * u3d设置一个字符串消息的回调函数进来.
