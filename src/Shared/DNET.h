@@ -35,14 +35,10 @@ enum class DNetError
     RuntimeIncompatible = 7,
     RuntimeNotFound = 8,
     SymbolNotFound = 9,
-    DisplayNotFound = 10,
-    DeviceNotFound = 11,
-    TargetNotFound = 12,
-    CapabilityNotFound = 13,
-    BufferTooSmall = 14,
-    SyncFailed = 15,
-    OperationFailed = 16,
-    InvalidAttribute = 17,
+    BufferTooSmall = 10,
+    SyncFailed = 11,
+    OperationFailed = 12,
+    InvalidAttribute = 13,
 };
 
 // 字符串消息的处理回调
@@ -111,6 +107,21 @@ DNET_EXPORT DNetError __cdecl dnServerClose(dxlib::KCPServer* server);
  * @returns An int.
  */
 DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::KCPServer* server);
+
+/**
+ * 向某个客户端发送数据.
+ *
+ * @author daixian
+ * @date 2021/1/7
+ *
+ * @param [in,out] server If non-null, the server.
+ * @param          id     The identifier.
+ * @param          msg    The message.
+ * @param          len    The length.
+ *
+ * @returns A DNetError.
+ */
+DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::KCPServer* server, int id, const char* msg, int len);
 
 //----------------------------- 客户端 -----------------------------
 

@@ -96,7 +96,7 @@ class TCPServer
     Poco::BasicEvent<TCPEventAccept>& EventAccept();
 
     /**
-     * 得到关闭的事件.
+     * 得到这个对象自己关闭的事件.
      *
      * @author daixian
      * @date 2020/12/21
@@ -104,6 +104,16 @@ class TCPServer
      * @returns A reference to a Poco::BasicEvent<TCPEvent>
      */
     Poco::BasicEvent<TCPEventClose>& EventClose();
+
+    /**
+     * 远端关闭的事件.
+     *
+     * @author daixian
+     * @date 2021/1/7
+     *
+     * @returns A reference to a Poco::BasicEvent<TCPEventRemoteClose>
+     */
+    Poco::BasicEvent<TCPEventRemoteClose>& EventRemoteClose();
 
     /**
      * 非阻塞的发送一段数据.正常发送成功返回0.

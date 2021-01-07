@@ -94,6 +94,12 @@ class KCPServer::Impl
     // 用户连接进来了的事件.
     Poco::BasicEvent<KCPEventAccept> eventAccept;
 
+    // 对象自身关闭的事件
+    Poco::BasicEvent<KCPEventClose> eventClose;
+
+    // 远程端关闭的事件
+    Poco::BasicEvent<KCPEventRemoteClose> eventRemoteClose;
+
     // socket使用的buff,最好大于1400吧
     std::vector<char> receBuf;
 
@@ -160,6 +166,8 @@ class KCPServer::Impl
             delete kvp.second;
         }
         remotes.clear();
+
+        eventClose.notify(this, KCPEventClose());
     }
 
     /**
@@ -226,8 +234,7 @@ class KCPServer::Impl
                      kcpUser->remote.port(), conv);
 
                 //发出这个事件消息
-                KCPEventAccept eventMsg(conv, kcpUser->accept);
-                eventAccept.notify(this, eventMsg);
+                eventAccept.notify(this, KCPEventAccept(conv, kcpUser->accept));
             }
         }
     }
@@ -394,6 +401,11 @@ void KCPServer::Close()
 Poco::BasicEvent<KCPEventAccept>& KCPServer::EventAccept()
 {
     return _impl->eventAccept;
+}
+
+Poco::BasicEvent<KCPEventClose>& KCPServer::EventClose()
+{
+    return _impl->eventClose;
 }
 
 int KCPServer::Receive(std::map<int, std::vector<std::string>>& msgs)

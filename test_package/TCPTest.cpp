@@ -15,6 +15,7 @@
 #include "Poco/Timespan.h"
 #include "Poco/Net/SocketStream.h"
 #include "Poco/Net/SocketAddress.h"
+#include "Poco/Delegate.h"
 
 using namespace dxlib;
 using namespace std;
@@ -67,18 +68,41 @@ using Poco::Net::StreamSocket;
 //    }
 //}
 
+class Target
+{
+  public:
+    std::atomic_int onEventAcceptCount = 0;
+    std::atomic_int OnEventRemoteCloseCount = 0;
+    void OnEventAccept(const void* pSender, TCPEventAccept& arg)
+    {
+        onEventAcceptCount++;
+        LogI("Target.OnEventAccept(): onEvent %d !", arg.tcpID);
+    }
+
+    void OnEventRemoteClose(const void* pSender, TCPEventRemoteClose& arg)
+    {
+        OnEventRemoteCloseCount++;
+        LogI("Target.OnEventRemoteCloseCount(): onEvent %d !", arg.tcpID);
+    }
+};
+
 TEST(TCPServer, OpenClose)
 {
+    Target target;
+
     TCPServer server("server", "0.0.0.0", 8341);
     server.Start();
+    server.EventAccept() += Poco::delegate(&target, &Target::OnEventAccept);
+    server.EventRemoteClose() += Poco::delegate(&target, &Target::OnEventRemoteClose);
     server.WaitStarted();
 
     TCPClient client;
     client.Connect("127.0.0.1", 8341);
 
-    while (server.GetRemotes().empty()) {
+    while (server.RemoteCount() == 0) {
         this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
     client.Close();
 
     int tcpId = server.GetRemotes().begin()->first;
@@ -89,10 +113,12 @@ TEST(TCPServer, OpenClose)
             for (auto& kvp : msgs) {
                 LogI("服务器收到了客户端数据!");
             }
-
-        server.Receive(msgs); //第二次调用接收就会清理客户端
     }
     ASSERT_TRUE(server.GetRemotes().empty());
+
+    //这里已经产生了远程关闭事件
+    ASSERT_TRUE(target.onEventAcceptCount == 1);
+    ASSERT_TRUE(target.OnEventRemoteCloseCount == 1);
 
     server.Close();
 }

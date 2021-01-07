@@ -125,8 +125,11 @@ class TCPServer::Impl
     // 用户连接进来了的事件.
     Poco::BasicEvent<TCPEventAccept> eventAccept;
 
-    // 客户端关闭的事件
+    // 对象自身关闭的事件
     Poco::BasicEvent<TCPEventClose> eventClose;
+
+    // 远程端关闭的事件
+    Poco::BasicEvent<TCPEventRemoteClose> eventRemoteClose;
 
     // 客户端记录.
     ClientManager clientManager;
@@ -226,6 +229,8 @@ class TCPServer::Impl
             //清理出错的客户端
             if (itr->second->isError()) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
+                eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
+                delete itr->second;
                 itr = clientManager.mClients.erase(itr);
             }
             else {
@@ -249,6 +254,8 @@ class TCPServer::Impl
             //清理出错的客户端
             if (itr->second->isError()) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
+                eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
+                delete itr->second;
                 itr = clientManager.mClients.erase(itr);
             }
             else {
@@ -316,6 +323,11 @@ Poco::BasicEvent<TCPEventAccept>& TCPServer::EventAccept()
 Poco::BasicEvent<TCPEventClose>& TCPServer::EventClose()
 {
     return _impl->eventClose;
+}
+
+Poco::BasicEvent<TCPEventRemoteClose>& TCPServer::EventRemoteClose()
+{
+    return _impl->eventRemoteClose;
 }
 
 int TCPServer::Available(int tcpID)

@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include "TCP/TCPClient.h"
+#include "KCPEvent.h"
 
 namespace dxlib {
 
@@ -187,6 +188,26 @@ class KCPClient
      * @returns TCPClient指针.
      */
     TCPClient* GetTCPClient();
+
+    /**
+     * 得到连接成功的事件.
+     *
+     * @author daixian
+     * @date 2020/12/21
+     *
+     * @returns A reference to a Poco::BasicEvent<KCPEvent>
+     */
+    Poco::BasicEvent<KCPEventAccept>& EventConnect();
+
+    /**
+     * 自身关闭的事件.
+     *
+     * @author daixian
+     * @date 2021/1/7
+     *
+     * @returns A reference to a Poco::BasicEvent<KCPEventClose>
+     */
+    Poco::BasicEvent<KCPEventClose>& EventClose();
 
   private:
     class Impl;

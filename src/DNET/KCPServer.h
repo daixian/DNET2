@@ -101,6 +101,16 @@ class KCPServer
     Poco::BasicEvent<KCPEventAccept>& EventAccept();
 
     /**
+     * 自身关闭的事件.
+     *
+     * @author daixian
+     * @date 2021/1/7
+     *
+     * @returns A reference to a Poco::BasicEvent<KCPEventClose>
+     */
+    Poco::BasicEvent<KCPEventClose>& EventClose();
+
+    /**
      * 非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
      *
      * @author daixian

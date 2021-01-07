@@ -59,11 +59,14 @@ class TCPClient::Impl
     // 是否已经网络错误了
     bool isError = false;
 
-    // 用户连接进来了的事件.
+    // 用户连接成功的事件.
     Poco::BasicEvent<TCPEventAccept> eventConnect;
 
     // 客户端关闭的事件
     Poco::BasicEvent<TCPEventClose> eventClose;
+
+    // 远程端关闭的事件
+    Poco::BasicEvent<TCPEventRemoteClose> eventRemoteClose;
 
     /**
      * Connects
@@ -207,6 +210,7 @@ class TCPClient::Impl
         if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
             LogE("TCPClient.Receive():poll到了异常!");
             isError = true;
+            eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
         }
 
         while (true) {
@@ -245,6 +249,7 @@ class TCPClient::Impl
         if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
             LogE("TCPClient.Receive():poll到了异常!");
             isError = true;
+            eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
             return -1; //网络出错那么就不接收算了
         }
 
@@ -384,6 +389,11 @@ Poco::BasicEvent<TCPEventAccept>& TCPClient::EventConnect()
 Poco::BasicEvent<TCPEventClose>& TCPClient::EventClose()
 {
     return _impl->eventClose;
+}
+
+Poco::BasicEvent<TCPEventRemoteClose>& TCPClient::EventRemoteClose()
+{
+    return _impl->eventRemoteClose;
 }
 
 } // namespace dxlib

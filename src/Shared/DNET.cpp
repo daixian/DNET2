@@ -60,7 +60,7 @@ void deleteClient(dxlib::KCPClient* ptr)
 DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dxlib::KCPServer* server, MessageProcCallback proc)
 {
     server->user = proc;
-    //serverMsgProc = proc;
+    return DNetError::Ok;
 }
 
 /**
@@ -184,6 +184,30 @@ DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::KCPServer* server)
 }
 
 /**
+ * 向某个客户端发送数据.
+ *
+ * @author daixian
+ * @date 2021/1/7
+ *
+ * @param [in,out] server If non-null, the server.
+ * @param          id     The identifier.
+ * @param          msg    The message.
+ * @param          len    The length.
+ *
+ * @returns A DNetError.
+ */
+DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::KCPServer* server, int id, const char* msg, int len)
+{
+    int res = server->Send(id, msg, len);
+    if (res > 0) {
+        return DNetError::Ok;
+    }
+    else {
+        return DNetError::OperationFailed;
+    }
+}
+
+/**
  * u3d设置一个字符串消息的回调函数进来.
  *
  * @author daixian
@@ -195,6 +219,7 @@ DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::KCPServer* server)
 DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dxlib::KCPClient* client, MessageProcCallback proc)
 {
     client->user = proc;
+    return DNetError::Ok;
 }
 
 /**
@@ -295,7 +320,7 @@ DNET_EXPORT DNetError __cdecl dnClientUpdate(dxlib::KCPClient* client)
     }
 
     //处理回调就绑定在对象上
-    MessageProcCallback serverMsgProc = (MessageProcCallback)(client->user);
+    MessageProcCallback clientMsgProc = (MessageProcCallback)(client->user);
 
     std::vector<std::string> msgs;
     int count = ptr->Receive(msgs);
@@ -305,11 +330,34 @@ DNET_EXPORT DNetError __cdecl dnClientUpdate(dxlib::KCPClient* client)
 
         try {
             // 执行消息处理
-            serverMsgProc(client, id, msgs[i].c_str());
+            clientMsgProc(client, id, msgs[i].c_str());
         }
         catch (const std::exception&) {
         }
     }
 
     return DNetError::Ok;
+}
+
+/**
+ * 向服务器端发送数据.
+ *
+ * @author daixian
+ * @date 2021/1/7
+ *
+ * @param [in,out] client If non-null, the server.
+ * @param          msg    The message.
+ * @param          len    The length.
+ *
+ * @returns A DNetError.
+ */
+DNET_EXPORT DNetError __cdecl dnClientSend(dxlib::KCPClient* client, const char* msg, int len)
+{
+    int res = client->Send(msg, len);
+    if (res > 0) {
+        return DNetError::Ok;
+    }
+    else {
+        return DNetError::OperationFailed;
+    }
 }

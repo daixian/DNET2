@@ -183,6 +183,7 @@ class TCPClient
 
     /**
      * 得到关闭的事件.
+     * server.EventAccept() += Poco::delegate(&target, &Target::OnEventAccept);
      *
      * @author daixian
      * @date 2020/12/21
@@ -190,6 +191,16 @@ class TCPClient
      * @returns A reference to a Poco::BasicEvent<TCPEvent>
      */
     Poco::BasicEvent<TCPEventClose>& EventClose();
+
+    /**
+     * 远端关闭的事件.
+     *
+     * @author daixian
+     * @date 2021/1/7
+     *
+     * @returns A reference to a Poco::BasicEvent<TCPEventRemoteClose>
+     */
+    Poco::BasicEvent<TCPEventRemoteClose>& EventRemoteClose();
 
   private:
     class Impl;

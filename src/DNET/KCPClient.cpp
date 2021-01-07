@@ -102,6 +102,15 @@ class KCPClient::Impl
     // 远程对象列表
     ikcpcb* kcpRemote = nullptr;
 
+    // 用户连接成功的事件.
+    Poco::BasicEvent<KCPEventAccept> eventConnect;
+
+    // 客户端关闭的事件
+    Poco::BasicEvent<KCPEventClose> eventClose;
+
+    // 远程端关闭的事件(这个未定该如何判断,是否需要fin?)
+    Poco::BasicEvent<KCPEventRemoteClose> eventRemoteClose;
+
     // 得到kcpRemote的KCPUser的指针
     KCPUser* kcpUser()
     {
@@ -163,6 +172,8 @@ class KCPClient::Impl
 
         delete kcpRemote;
         kcpRemote = nullptr;
+
+        eventClose.notify(this, KCPEventClose());
     }
 
     void TCPClientAcceptReceive()
@@ -218,6 +229,8 @@ class KCPClient::Impl
                 //tcpClient = nullptr;
                 delete clientTempAccept;
                 clientTempAccept = nullptr;
+
+                eventConnect.notify(this, KCPEventAccept(conv, kcpUser->accept));
                 break;
             }
         }
@@ -436,6 +449,16 @@ int KCPClient::WaitSendCount()
 TCPClient* KCPClient::GetTCPClient()
 {
     return _impl->tcpClient;
+}
+
+Poco::BasicEvent<KCPEventAccept>& KCPClient::EventConnect()
+{
+    return _impl->eventConnect;
+}
+
+Poco::BasicEvent<KCPEventClose>& KCPClient::EventClose()
+{
+    return _impl->eventClose;
 }
 
 } // namespace dxlib
