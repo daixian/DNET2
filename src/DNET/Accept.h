@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include <string>
+#include <memory>
+#include "xuexuejson/Serialize.hpp"
 
 namespace dxlib {
 
@@ -10,13 +12,34 @@ namespace dxlib {
  * @author daixian
  * @date 2020/12/19
  */
-class Accept
+class Accept : XUEXUE_JSON_OBJECT
 {
   public:
     Accept();
     ~Accept();
-    Accept(const Accept& obj);
-    Accept& operator=(const Accept& obj);
+
+    // 客户端的Name.
+    std::string nameC;
+
+    // 服务器端的Name.
+    std::string nameS;
+
+    // 客户端生成的随机key.
+    std::string keyC;
+
+    // 服务器端生成的随机key.
+    std::string keyS;
+
+    // 客户端的uuid.
+    std::string uuidC;
+
+    // 服务器端的uuid.
+    std::string uuidS;
+
+    // 通信ID
+    int conv = -1;
+
+    XUEXUE_JSON_OBJECT_M7(nameC, nameS, keyC, keyS, uuidC, uuidS, conv)
 
     // 这个认证是否加密
     bool isEncrypt = false;
@@ -33,6 +56,18 @@ class Accept
      * @returns The accept string.
      */
     std::string CreateAcceptString(const std::string& uuidC, const std::string& nameC);
+
+    /**
+     * 对一个随机的认证字符串进行校验.(服务器端调用)
+     *
+     * @author daixian
+     * @date 2021/1/9
+     *
+     * @param  AcceptString The accept string.
+     *
+     * @returns True if it succeeds, false if it fails.
+     */
+    bool VerifyAccept(const std::string& AcceptString);
 
     /**
      * 对一个随机的认证字符串进行回应.(服务器端调用)
@@ -55,98 +90,28 @@ class Accept
      * @author daixian
      * @date 2020/12/19
      *
-     * @param          replyAcceptString The reply accept string.
-     * @param [in,out] uuidS             服务器端的uuid.
-     * @param [in,out] nameS             服务器端的名字.
-     * @param [in,out] conv              协商的conv.
+     * @param  replyAcceptString 收到的认证响应字符串.
      *
      * @returns 校验成功返回true.
      */
-    bool VerifyReplyAccept(const std::string& replyAcceptString, std::string& uuidS, std::string& nameS, int& conv);
+    bool VerifyReplyAccept(const std::string& replyAcceptString);
 
     /**
-     * 是否已经校验过了.
+     * 是否已经校验通过了.
      *
      * @author daixian
      * @date 2020/12/19
      *
      * @returns True if verified, false if not.
      */
-    bool isVerified();
-
-    /**
-     * 通信ID
-     *
-     * @author daixian
-     * @date 2020/12/28
-     *
-     * @returns An int.
-     */
-    int conv();
-
-    /**
-     * 客户端的Name.
-     *
-     * @author daixian
-     * @date 2020/12/19
-     *
-     * @returns A std::string.
-     */
-    std::string nameC();
-
-    /**
-     * 服务器端的Name.
-     *
-     * @author daixian
-     * @date 2020/12/19
-     *
-     * @returns A std::string.
-     */
-    std::string nameS();
-
-    /**
-     * 客户端的uuid.
-     *
-     * @author daixian
-     * @date 2020/12/23
-     *
-     * @returns An int.
-     */
-    std::string uuidC();
-
-    /**
-     * 服务器端的uuid.
-     *
-     * @author daixian
-     * @date 2020/12/23
-     *
-     * @returns An int.
-     */
-    std::string uuidS();
-
-    /**
-     * 客户端生成的随机key.
-     *
-     * @author daixian
-     * @date 2020/12/23
-     *
-     * @returns An int.
-     */
-    std::string keyC();
-
-    /**
-     * 服务器端生成的随机key.
-     *
-     * @author daixian
-     * @date 2020/12/23
-     *
-     * @returns An int.
-     */
-    std::string keyS();
+    bool isVerified()
+    {
+        return _isVerified;
+    }
 
   private:
-    class Impl;
-    Impl* _impl;
+    // 是否已经校验通过了.
+    bool _isVerified = false;
 };
 
 } // namespace dxlib

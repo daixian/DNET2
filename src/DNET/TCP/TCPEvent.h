@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include "../Accept.h"
 
 namespace dxlib {
 
@@ -14,11 +15,13 @@ namespace dxlib {
 class TCPEventAccept
 {
   public:
-    TCPEventAccept(int tcpID) : tcpID(tcpID) {}
+    TCPEventAccept(int tcpID, Accept* accept) : tcpID(tcpID), accept(accept) {}
     ~TCPEventAccept() {}
 
     // tcp连接里的id
     int tcpID = 0;
+
+    Accept* accept;
 };
 
 /**

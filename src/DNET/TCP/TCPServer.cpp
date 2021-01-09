@@ -56,10 +56,10 @@ class TCPAcceptRunnable : public Poco::Runnable
                 if (socket->poll(span, Poco::Net::Socket::SELECT_READ)) {
                     Poco::Net::StreamSocket streamSocket = socket->acceptConnection(); //这个函数是阻塞的
                     streamSocket.setBlocking(false);
-                    int tcpID = clientManager->AddClient(streamSocket); //添加这个用户
-                    LogI("TCPAcceptRunnable.run():新连接来了一个客户端%d", tcpID);
+                    TCPClient* client = clientManager->AddClient(streamSocket); //添加这个用户
+                    LogI("TCPAcceptRunnable.run():新连接来了一个客户端,临时tcpid=%d", client->TcpID());
 
-                    eventAccept->notify(this, TCPEventAccept(tcpID)); //发出这个事件消息
+                    //eventAccept->notify(this, TCPEventAccept(tcpID)); //发出这个事件消息
                 }
                 else {
                     isStarted = true; //标记已经启动了

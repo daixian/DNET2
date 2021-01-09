@@ -25,8 +25,6 @@
 
 #include "TCP/TCPClient.h"
 
-#include "KCPUser.h"
-
 namespace dxlib {
 
 //TODO: 可以让上层通过检测 ikcp_waitsnd 函数来判断还有多少包没有发出去，灵活抉择是否向 snd_queue 缓存追加数据包还是其他。
@@ -43,12 +41,12 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
 {
     try {
         //kcp里有几个位置调用udp_output的时候没有传user参数进来,所以不能使用这个参数
-        KCPUser* u = (KCPUser*)kcp->user;
+        KCPClient* u = (KCPClient*)kcp->user;
         //if (u->remote.a nullptr) {
         //    LogE("KCP2.udp_output():%s还没有remote记录,不能发送!", u->name);
         //    return -1;
         //}
-        LogD("KCPClient.udp_output():向{%s}发送! len=%d", u->uuid_remote.c_str(), len);
+        //LogD("KCPClient.udp_output():向{%s}发送! len=%d", u->uuid_remote.c_str(), len);
         return u->socket->sendTo(buf, len, u->remote);
     }
     catch (const Poco::Exception& e) {
@@ -61,404 +59,110 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
     }
 }
 
-class KCPClient::Impl
+KCPClient::KCPClient()
 {
-  public:
-    Impl(const std::string& name) : name(name)
-    {
-        receBuf.resize(8 * 1024);
-
-        //随机生成一个uuid
-        Poco::UUIDGenerator uuidGen;
-        uuid = uuidGen.createRandom().toString();
-    }
-    ~Impl()
-    {
-        Close();
-        delete clientTempAccept;
-    }
-
-    // 自己的名字
-    std::string name;
-
-    // 唯一标识符
-    std::string uuid;
-
-    // kcp使用的UDP端口
-    int port = 0;
-
-    // 自己的本地socket
-    Poco::Net::DatagramSocket* socket = nullptr;
-
-    // TCP的连接用于客户端连接tcp服务器
-    TCPClient* tcpClient = nullptr;
-
-    // socket使用的buff ,最好大于1400吧
-    std::vector<char> receBuf;
-
-    // 是否是等待连接状态
-    Accept* clientTempAccept = nullptr;
-
-    // 远程对象列表
-    ikcpcb* kcpRemote = nullptr;
-
-    // 用户连接成功的事件.
-    Poco::BasicEvent<KCPEventAccept> eventConnect;
-
-    // 客户端关闭的事件
-    Poco::BasicEvent<KCPEventClose> eventClose;
-
-    // 远程端关闭的事件(这个未定该如何判断,是否需要fin?)
-    Poco::BasicEvent<KCPEventRemoteClose> eventRemoteClose;
-
-    // 得到kcpRemote的KCPUser的指针
-    KCPUser* kcpUser()
-    {
-        if (kcpRemote == nullptr) {
-            return nullptr;
-        }
-
-        return (KCPUser*)kcpRemote->user;
-    }
-
-    //发送认证
-    int SendAccept(const std::string& host, int port)
-    {
-        Close();
-
-        if (clientTempAccept != nullptr) {
-            LogW("KCPClient.SendAccept():当前存在Accept未完成的状态,这是一次强制重发.");
-            delete clientTempAccept;
-        }
-
-        tcpClient = new TCPClient();
-        tcpClient->SetUUID(uuid);
-        int res = tcpClient->Connect(host, port);
-        if (res == 0) {
-            //tcp连接成功了
-            Poco::Net::DatagramSocket* tcs = (Poco::Net::DatagramSocket*)tcpClient->Socket();
-            Poco::Net::SocketAddress sAddr = tcs->address();
-
-            socket = new Poco::Net::DatagramSocket(sAddr); //使用和TCP端口相同的端口开始一个UDP接收
-            socket->setBlocking(false);                    //它可以设置是否是阻塞
-            clientTempAccept = new Accept();
-            std::string acceptStr = clientTempAccept->CreateAcceptString(uuid, name); //创建一个认证的自字符串发给服务器
-            return tcpClient->Send(acceptStr.c_str(), acceptStr.size());
-        }
-        return -1;
-    }
-
-    void Close()
-    {
-        if (tcpClient != nullptr) {
-            try {
-                tcpClient->Close();
-            }
-            catch (const std::exception&) {
-            }
-            delete tcpClient;
-            tcpClient = nullptr;
-        }
-
-        if (socket != nullptr) {
-            try {
-                socket->close();
-            }
-            catch (const std::exception&) {
-            }
-            delete socket;
-            socket = nullptr;
-        }
-
-        delete kcpRemote;
-        kcpRemote = nullptr;
-
-        eventClose.notify(this, KCPEventClose());
-    }
-
-    void TCPClientAcceptReceive()
-    {
-        if (tcpClient == nullptr) {
-            return;
-        }
-        if (clientTempAccept == nullptr) {
-            return;
-        }
-
-        std::vector<std::string> msgs;
-        tcpClient->Receive(msgs);
-        //遍历所有收到的消息
-        for (size_t msgIndex = 0; msgIndex < msgs.size(); msgIndex++) {
-            std::string& acceptStr = msgs[msgIndex]; //只处理第一条(设计上应该只有一条)
-            std::string uuidS;
-            std::string nameS;
-            int conv;
-
-            if (clientTempAccept->VerifyReplyAccept(acceptStr.data(), uuidS, nameS, conv)) {
-                poco_assert(conv >= 0);
-
-                Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
-
-                KCPUser* kcpUser = new KCPUser(socket, conv, *clientTempAccept);
-                //kcpUser->accept=Accept(*clientTempAccept); //拷贝accept对象
-                kcpUser->uuid_remote = uuidS;
-                kcpUser->name_remote = nameS;
-                kcpUser->remote = tcs->peerAddress(); //使用实际的远程端口就行了应该
-
-                LogI("KCPClient.TCPClientAcceptReceive():%s(%s:%d)远程通知来的conv=%d,认证成功!", nameS.c_str(),
-                     kcpUser->remote.host().toString().c_str(),
-                     kcpUser->remote.port(), conv);
-
-                ikcpcb* kcp = ikcp_create(conv, kcpUser);
-                // 设置回调函数
-                kcp->output = kcpc_udp_output;
-
-                ikcp_nodelay(kcp, 1, 10, 2, 1);
-                //kcp->rx_minrto = 10;
-                //kcp->fastresend = 1;
-
-                if (kcpRemote != nullptr) {
-                    LogW("KCPClient.TCPClientAcceptReceive():kcpRemote未清空,不应该发生这种情况!");
-                    delete kcpRemote;
-                }
-                kcpRemote = kcp; //添加这个新客户端
-
-                //认证完成,关闭认证相关的tcp客户端(先不要关闭了)
-                //tcpClient->Close();
-                //delete tcpClient;
-                //tcpClient = nullptr;
-                delete clientTempAccept;
-                clientTempAccept = nullptr;
-
-                eventConnect.notify(this, KCPEventAccept(conv, kcpUser->accept));
-                break;
-            }
-        }
-    }
-
-    /**
-     * 接收.
-     *
-     * @author daixian
-     * @date 2020/12/19
-     *
-     * @returns 接收到的消息的条数.
-     *
-     */
-    int Receive()
-    {
-        //执行一下TCP的
-        TCPClientAcceptReceive();
-
-        if (socket == nullptr) {
-            LogE("KCPClient.Receive():%s 还没有初始化,不能接收!", name);
-            return -1;
-        }
-
-        if (kcpRemote == nullptr) {
-            return -1;
-        }
-        int rece;
-        ikcpcb* kcp = kcpRemote;
-        KCPUser* user = (KCPUser*)kcp->user;
-        try {
-            //socket尝试接收
-            Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
-            int n = socket->receiveFrom(receBuf.data(), (int)receBuf.size(), remote);
-            if (n != -1) {
-                LogD("KCPClient.Receive():%s Socket接收到了数据,长度%d", name, n);
-
-                //尝试给kcp看看是否是它的信道的数据
-                rece = ikcp_input(kcp, receBuf.data(), n);
-                if (rece == -1) {
-                    //conv不对应
-                }
-                else {
-                    ikcp_flush(kcp); //尝试暴力flush
-
-                    while (rece >= 0) {
-                        rece = ikcp_recv(kcp, user->buffer.data(), user->buffer.size());
-                        if (rece > 0) {
-                            user->receData.push_back(std::string(user->buffer.data(), rece)); //拷贝记录这一条收到的信息
-                        }
-                    }
-                }
-            }
-        }
-        catch (const Poco::Exception& e) {
-            LogE("KCPClient.Receive():异常%s,%s", e.what(), e.message().c_str());
-        }
-        catch (const std::exception& e) {
-            LogE("KCPClient.Receive():异常:%s", e.what());
-        }
-
-        return (int)user->receData.size();
-    }
-
-    // 查询等待发送的消息条数
-    int WaitSendCount()
-    {
-        if (socket == nullptr || kcpRemote == nullptr) {
-            LogE("KCPClient.WaitSendCount():%s 还没有初始化,未开始发送!", name.c_str());
-            return 0;
-        }
-
-        return ikcp_waitsnd(kcpRemote);
-    }
-
-    int Send(const char* data, size_t len)
-    {
-        if (socket == nullptr || kcpRemote == nullptr) {
-            LogE("KCPClient.Send():%s 还没有初始化,不能发送!", name.c_str());
-            return -1;
-        }
-
-        int res = ikcp_send(kcpRemote, data, (int)len);
-        if (res < 0) {
-            LogE("KCPClient.Send():发送异常返回 res=%d", res);
-        }
-        ikcp_flush(kcpRemote); //尝试暴力flush
-        return res;
-    }
-
-    /**
-     * 需要定时调用.在调用接收或者发送之后调用好了
-     *
-     * @author daixian
-     * @date 2020/12/19
-     */
-    void Update()
-    {
-        if (kcpRemote != nullptr)
-            ikcp_update(kcpRemote, iclock());
-    }
-};
-
-KCPClient::KCPClient(const std::string& name) : name(name)
-{
-    _impl = new Impl(name);
+    socketBuffer.resize(8 * 1024);
+    kcpReceBuf.resize(8 * 1024);
 }
 
 KCPClient::~KCPClient()
 {
-    delete _impl;
-}
-int KCPClient::ConvID()
-{
-    if (_impl->kcpRemote != nullptr)
-        return _impl->kcpRemote->conv;
-    return -1;
 }
 
-std::string KCPClient::UUID()
+void KCPClient::Bind(void* tcp)
 {
-    return _impl->uuid;
-}
+    TCPClient* tcpClient = (TCPClient*)tcp;
+    if (tcpClient->isAccepted()) {
+        std::string uuidS = tcpClient->AcceptData()->uuidS;
+        std::string nameS = tcpClient->AcceptData()->nameS;
+        int conv = tcpClient->AcceptData()->conv;
 
-std::string KCPClient::SetUUID(const std::string& uuid)
-{
-    _impl->uuid = uuid;
-    _impl->tcpClient->SetUUID(uuid);
-    return _impl->uuid;
-}
+        Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
+        Poco::Net::SocketAddress sAddr = tcs->address();
 
-std::string KCPClient::RemoteUUID()
-{
-    KCPUser* user = _impl->kcpUser();
-    if (user == nullptr) {
-        return "";
-    }
-    return user->uuid_remote;
-}
+        socket = new Poco::Net::DatagramSocket(sAddr); //使用和TCP端口相同的端口开始一个UDP接收
+        socket->setBlocking(false);                    //它可以设置是否是阻塞
 
-std::string KCPClient::RemoteName()
-{
-    KCPUser* user = _impl->kcpUser();
-    if (user == nullptr) {
-        return "";
-    }
-    return user->name_remote;
-}
+        remote = tcs->peerAddress(); //使用实际的远程端口就行了应该
 
-int KCPClient::Connect(const std::string& host, int port)
-{
-    int res = _impl->SendAccept(host, port);
-    _impl->Update();
-    return res;
-}
+        kcp = ikcp_create(conv, this);
+        // 设置回调函数
+        kcp->output = kcpc_udp_output;
 
-void KCPClient::Close()
-{
-    _impl->Close();
-}
-
-bool KCPClient::isAccepting()
-{
-    if (_impl->clientTempAccept != nullptr) {
-        return true;
-    }
-    else {
-        return false;
-    }
-}
-
-bool KCPClient::isAccepted()
-{
-    if (_impl->kcpRemote != nullptr) {
-        return true;
-    }
-    return false;
-}
-
-void KCPClient::WaitAccepted(int waitCount)
-{
-    while (!isAccepted()) {
-        _impl->TCPClientAcceptReceive();
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        ikcp_nodelay(kcp, 1, 10, 2, 1);
+        //kcp->rx_minrto = 10;
+        //kcp->fastresend = 1;
     }
 }
 
 int KCPClient::Receive(std::vector<std::string>& msgs)
 {
-    _impl->Receive();
-
-    msgs.clear();
-    if (_impl->kcpRemote == nullptr) {
+    if (socket == nullptr) {
+        LogE("KCPClient.Receive():还没有初始化,不能接收!");
         return -1;
     }
-    KCPUser* kcpUser = (KCPUser*)_impl->kcpRemote->user;
-    msgs = kcpUser->receData;
-    kcpUser->receData.clear();
 
-    _impl->Update();
+    if (kcp == nullptr) {
+        return -1;
+    }
+    int rece;
+
+    try {
+        //socket尝试接收
+        Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
+        int n = socket->receiveFrom(socketBuffer.data(), (int)socketBuffer.size(), remote);
+        if (n != -1) {
+            LogD("KCPClient.Receive(): Socket接收到了数据,长度%d", n);
+
+            //尝试给kcp看看是否是它的信道的数据
+            rece = ikcp_input(kcp, socketBuffer.data(), n);
+            if (rece == -1) {
+                //conv不对应
+            }
+            else {
+                ikcp_flush(kcp); //尝试暴力flush
+
+                while (rece >= 0) {
+                    rece = ikcp_recv(kcp, kcpReceBuf.data(), kcpReceBuf.size());
+                    if (rece > 0) {
+                        receData.push_back(std::string(kcpReceBuf.data(), rece)); //拷贝记录这一条收到的信息
+                    }
+                }
+            }
+        }
+    }
+    catch (const Poco::Exception& e) {
+        LogE("KCPClient.Receive():异常%s,%s", e.what(), e.message().c_str());
+    }
+    catch (const std::exception& e) {
+        LogE("KCPClient.Receive():异常:%s", e.what());
+    }
+
+    return (int)receData.size();
+
+    msgs.clear();
+
+    msgs = receData;
+    receData.clear();
+
+    ikcp_update(kcp, iclock()); //需要定时调用.在调用接收或者发送之后调用好了
     return msgs.size();
 }
 
 int KCPClient::Send(const char* data, size_t len)
 {
-    int res = _impl->Send(data, len);
-    _impl->Update();
+    if (socket == nullptr || kcp == nullptr) {
+        LogE("KCPClient.Send():还没有初始化,不能发送!");
+        return -1;
+    }
+
+    int res = ikcp_send(kcp, data, (int)len);
+    if (res < 0) {
+        LogE("KCPClient.Send():发送异常返回 res=%d", res);
+    }
+    ikcp_flush(kcp); //尝试暴力flush
+    ikcp_update(kcp, iclock());
     return res;
-}
-
-int KCPClient::WaitSendCount()
-{
-    return _impl->WaitSendCount();
-}
-
-TCPClient* KCPClient::GetTCPClient()
-{
-    return _impl->tcpClient;
-}
-
-Poco::BasicEvent<KCPEventAccept>& KCPClient::EventConnect()
-{
-    return _impl->eventConnect;
-}
-
-Poco::BasicEvent<KCPEventClose>& KCPClient::EventClose()
-{
-    return _impl->eventClose;
 }
 
 } // namespace dxlib

@@ -3,8 +3,13 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "TCP/TCPClient.h"
-#include "KCPEvent.h"
+
+#include "Poco/Net/SocketAddress.h"
+#include "Poco/Net/DatagramSocket.h"
+
+#include "Accept.h"
+
+#include "./kcp/ikcp.h"
 
 namespace dxlib {
 
@@ -25,122 +30,41 @@ class KCPClient
      *
      * @author daixian
      * @date 2020/5/12
-     *
-     * @param  name 名称.
      */
-    KCPClient(const std::string& name);
+    KCPClient();
 
-    /**
-     * Destructor.
-     *
-     * @author daixian
-     * @date 2020/5/12
-     */
     ~KCPClient();
 
-    // 自己的服务器名字
-    std::string name;
+    // 自己的UDPSocket,用于发送函数
+    Poco::Net::DatagramSocket* socket = nullptr;
 
-    // 用户扩展
-    void* user = nullptr;
+    // 接收数据Socket Buffer
+    std::vector<char> socketBuffer;
 
-    /**
-     * 得到它的ConvID号.
-     *
-     * @author daixian
-     * @date 2020/12/28
-     *
-     * @returns An int.
-     */
-    int ConvID();
+    // 要发送过去的地址(这里还是用对象算了)
+    Poco::Net::SocketAddress remote;
 
-    /**
-     * 返回这个UUID.
-     *
-     * @author daixian
-     * @date 2020/12/23
-     *
-     * @returns A std::string.
-     */
-    std::string UUID();
+    // 这个远端之间的认证信息(每个kcp连接之间都有自己的认证随机Key)
+    Accept* accept;
+
+    // 远程对象列表
+    ikcpcb* kcp = nullptr;
+
+    // 接收数据buffer
+    std::vector<char> kcpReceBuf;
+
+    // 接收到的待处理的数据
+    std::vector<std::string> receData;
 
     /**
-     * 设置它的UUID.
+     * 绑定一个TCPClient.
      *
      * @author daixian
-     * @date 2020/12/23
+     * @date 2021/1/9
      *
-     * @returns A std::string.
+     * @param [in,out] tcplient If non-null, the tcplient.
      */
-    std::string SetUUID(const std::string& uuid);
-
-    /**
-     * 远端的uuid.
-     *
-     * @author daixian
-     * @date 2020/12/28
-     *
-     * @returns A std::string.
-     */
-    std::string RemoteUUID();
-
-    /**
-     * 远端的Name.
-     *
-     * @author daixian
-     * @date 2020/12/28
-     *
-     * @returns A std::string.
-     */
-    std::string RemoteName();
-
-    /**
-     * 向服务端发送一条认证字符串,然后等待服务器回复.
-     *
-     * @author daixian
-     * @date 2020/5/14
-     *
-     * @returns An int.
-     */
-    int Connect(const std::string& host, int port);
-
-    /**
-     * 客户端是否正在向服务器端Accept
-     *
-     * @author daixian
-     * @date 2020/12/23
-     *
-     * @returns True if accepting, false if not.
-     */
-    bool isAccepting();
-
-    /**
-     * 是否已经通过了认证
-     *
-     * @author daixian
-     * @date 2020/12/24
-     *
-     * @returns True if accepted, false if not.
-     */
-    bool isAccepted();
-
-    /**
-     * 等待认证成功
-     *
-     * @author daixian
-     * @date 2020/12/24
-     *
-     * @param  waitCount (Optional) 等待的次数,一次100ms吧.
-     */
-    void WaitAccepted(int waitCount = 50);
-
-    /**
-     * 关闭.
-     *
-     * @author daixian
-     * @date 2020/12/18
-     */
-    void Close();
+    void Bind(void* tcpClient);
 
     /**
      * 非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
@@ -167,51 +91,7 @@ class KCPClient
      */
     int Send(const char* data, size_t len);
 
-    /**
-     * 当前等待发送的消息计数.如果这个数量太多,那么已经拥塞.
-     *
-     * @author daixian
-     * @date 2020/12/20
-     *
-     * @param  conv The convert.
-     *
-     * @returns An int.
-     */
-    int WaitSendCount();
-
-    /**
-     * 得到它的TCP成员对象.在握手阶段会使用这个TCP.
-     *
-     * @author daixian
-     * @date 2020/12/25
-     *
-     * @returns TCPClient指针.
-     */
-    TCPClient* GetTCPClient();
-
-    /**
-     * 得到连接成功的事件.
-     *
-     * @author daixian
-     * @date 2020/12/21
-     *
-     * @returns A reference to a Poco::BasicEvent<KCPEvent>
-     */
-    Poco::BasicEvent<KCPEventAccept>& EventConnect();
-
-    /**
-     * 自身关闭的事件.
-     *
-     * @author daixian
-     * @date 2021/1/7
-     *
-     * @returns A reference to a Poco::BasicEvent<KCPEventClose>
-     */
-    Poco::BasicEvent<KCPEventClose>& EventClose();
-
   private:
-    class Impl;
-    Impl* _impl = nullptr;
 };
 
 } // namespace dxlib

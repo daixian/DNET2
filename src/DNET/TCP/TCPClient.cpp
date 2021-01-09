@@ -1,4 +1,5 @@
 ﻿#include "TCPClient.h"
+#include "xuexuejson/Serialize.hpp"
 
 #include "Poco/Net/Socket.h"
 #include "Poco/Net/StreamSocket.h"
@@ -38,6 +39,9 @@ class TCPClient::Impl
     // 名字.
     std::string name = "TCPClient";
 
+    // 设置这个是服务器
+    ClientManager* clientManager = nullptr;
+
     // 一个tcp的ID.
     int tcpID = -1;
 
@@ -55,6 +59,9 @@ class TCPClient::Impl
 
     // 接收用的buffer
     std::vector<char> receBuff;
+
+    // 客户端和服务器端认证的数据
+    Accept* acceptData = nullptr;
 
     // 是否已经网络错误了
     bool isError = false;
@@ -123,7 +130,8 @@ class TCPClient::Impl
         socket.setNoDelay(true);
         socket.setBlocking(false);
 
-        eventConnect.notify(this, TCPEventAccept(0));
+        SendAccept();
+
         return 0;
     }
 
@@ -143,6 +151,8 @@ class TCPClient::Impl
             }
 
             isConnected = false;
+            delete acceptData;
+            acceptData = nullptr;
 
             eventClose.notify(this, TCPEventClose());
         }
@@ -159,14 +169,14 @@ class TCPClient::Impl
      *
      * @returns An int.
      */
-    int Send(const char* data, size_t len)
+    int Send(const char* data, size_t len, int type)
     {
         if (!isConnected) {
             return -1;
         }
         //数据打包
         std::vector<char> package;
-        packet.Pack(data, (int)len, package, 1); //规定用户数据类型为1
+        packet.Pack(data, (int)len, package, type);
 
         int sendCount = 0;
         for (size_t i = 0; i < 10; i++) {
@@ -179,6 +189,100 @@ class TCPClient::Impl
         }
 
         return sendCount;
+    }
+
+    //发送认证
+    int SendAccept()
+    {
+        if (acceptData != nullptr) {
+            LogW("TCPClient.SendAccept():当前存在Accept未完成的状态,这是一次强制重发.");
+            delete acceptData;
+        }
+
+        acceptData = new Accept();
+        std::string acceptStr = acceptData->CreateAcceptString(uuid, name); //创建一个认证的自字符串发给服务器
+        return Send(acceptStr.c_str(), acceptStr.size(), 0);
+    }
+
+    int ProcCMD(std::vector<std::string>& msgs, std::vector<int>& types)
+    {
+        //遍历所有收到的消息
+        for (size_t msgIndex = 0; msgIndex < msgs.size();) {
+            if (types[msgIndex] == 0) {
+                //命令消息:0号命令
+                std::string& acceptStr = msgs[msgIndex];
+                ProcAccept(acceptStr);
+
+                // 移除这个命令消息
+                msgs.erase(msgs.begin() + msgIndex);
+                types.erase(types.begin() + msgIndex);
+            }
+            else {
+                msgIndex++;
+            }
+        }
+
+        return (int)msgs.size();
+    }
+
+    int ProcCMD(std::vector<std::vector<char>>& msgs, std::vector<int>& types)
+    {
+        //遍历所有收到的消息
+        for (size_t msgIndex = 0; msgIndex < msgs.size();) {
+
+            if (types[msgIndex] == 0) {
+                //命令消息:0号命令
+                std::string& acceptStr = std::string(msgs[msgIndex].data(), msgs[msgIndex].size());
+                ProcAccept(acceptStr);
+
+                // 移除这个命令消息
+                msgs.erase(msgs.begin() + msgIndex);
+                types.erase(types.begin() + msgIndex);
+            }
+            else {
+                msgIndex++;
+            }
+        }
+
+        return (int)msgs.size();
+    }
+
+    // 处理accept字符串
+    void ProcAccept(std::string& acceptStr)
+    {
+        if (clientManager != nullptr) {
+            //自己是服务器端
+            acceptData = new Accept();
+
+            if (!acceptData->VerifyAccept(acceptStr)) {
+                // replyStr为空,非法的认证信息
+                LogE("TCPClient.ProcCMD():非法的认证信息!");
+            }
+            else {
+                // 重新指向分配过的tcpID
+                clientManager->RegisterClientWithUUID(acceptData->uuidC, tcpID); //这个函数会重新分配tcpID
+                std::string replyStr = acceptData->ReplyAcceptString(acceptStr, uuid, name, tcpID);
+                poco_assert(!replyStr.empty());
+                // replyStr有内容,有效的认证信息,自己是服务器端
+                Send(replyStr.c_str(), replyStr.size(), 0);
+
+                LogI("TCPClient.ProcCMD():添加了一个新客户端%s,Addr=%s:%d,分配conv=%d", acceptData->uuidC,
+                     socket.peerAddress().host().toString().c_str(),
+                     socket.peerAddress().port(), tcpID);
+
+                //发出这个事件消息
+                eventConnect.notify(this, TCPEventAccept(tcpID, acceptData));
+            }
+        }
+        else {
+            //自己是客户端
+            if (acceptData->VerifyReplyAccept(acceptStr.data())) {
+                //服务器返回的Accept验证成功
+                poco_assert(acceptData->conv >= 0);
+
+                eventConnect.notify(this, TCPEventAccept(tcpID, acceptData));
+            }
+        }
     }
 
     int Available()
@@ -196,14 +300,15 @@ class TCPClient::Impl
      * @author daixian
      * @date 2020/12/22
      *
-     * @param [out] msgs The msgs.
+     * @param [out] msgs  The msgs.
+     * @param [out] types 消息的类型.
      *
      * @returns 接收到的数据条数.
      */
-    int Receive(std::vector<std::vector<char>>& msgs)
+    int Receive(std::vector<std::vector<char>>& msgs, std::vector<int>& types)
     {
         msgs.clear();
-        std::vector<int> types; //消息的类型
+        types.clear();
 
         if (!isConnected) {
             return -1;
@@ -237,14 +342,15 @@ class TCPClient::Impl
      * @author daixian
      * @date 2020/12/22
      *
-     * @param [out] msgs The msgs.
+     * @param [out] msgs  The msgs.
+     * @param [out] types 消息的类型.
      *
      * @returns 接收到的数据条数.
      */
-    int Receive(std::vector<std::string>& msgs)
+    int Receive(std::vector<std::string>& msgs, std::vector<int>& types)
     {
         msgs.clear();
-        std::vector<int> types; //消息的类型
+        types.clear();
 
         if (!isConnected) {
             return -1;
@@ -274,28 +380,29 @@ class TCPClient::Impl
     }
 };
 
-TCPClient::TCPClient()
+TCPClient::TCPClient(const std::string& name)
 {
-    _impl = new Impl();
-}
-
-TCPClient::TCPClient(int port)
-{
-    _impl = new Impl();
+    _impl = std::shared_ptr<Impl>(new Impl());
+    _impl->name = name;
 }
 
 TCPClient::~TCPClient()
 {
-    delete _impl;
 }
 
-void TCPClient::CreateWithServer(int tcpID, void* socket, TCPClient& obj)
+void TCPClient::CreateWithServer(int tcpID, void* socket, void* clientManager,
+                                 TCPClient& obj)
 {
     using Poco::Timespan;
 
     //TCPClient obj;
-    obj._impl->tcpID = tcpID;                              //这里有访问权限
+    obj._impl->tcpID = tcpID; //这里有访问权限
+    obj._impl->clientManager = (ClientManager*)clientManager;
     obj._impl->socket = *(Poco::Net::StreamSocket*)socket; //拷贝一次
+
+    //obj._impl->eventConnect = *pTCPEventAccept;
+    //obj._impl->eventClose = *pTCPEventClose;
+    //obj._impl->eventRemoteClose = *pTCPEventRemoteClose;
 
     obj._impl->isConnected = true;
 
@@ -318,6 +425,10 @@ int TCPClient::TcpID()
 {
     return _impl->tcpID;
 }
+void TCPClient::SetTcpID(int tcpID)
+{
+    _impl->tcpID = tcpID;
+}
 
 std::string TCPClient::UUID()
 {
@@ -328,6 +439,18 @@ std::string TCPClient::SetUUID(const std::string& uuid)
 {
     _impl->uuid = uuid;
     return _impl->uuid;
+}
+
+Accept* TCPClient::AcceptData()
+{
+    return _impl->acceptData;
+}
+
+bool TCPClient::isAccepted()
+{
+    if (_impl->acceptData != nullptr) {
+        return _impl->acceptData->isVerified();
+    }
 }
 
 void TCPClient::Close()
@@ -347,16 +470,21 @@ int TCPClient::Connect(const std::string& host, int port)
 
 int TCPClient::Send(const char* data, size_t len)
 {
-    return _impl->Send(data, len);
+    return _impl->Send(data, len, 1); //规定用户数据类型为1
 }
+
 int TCPClient::Receive(std::vector<std::vector<char>>& msgs)
 {
-    return _impl->Receive(msgs);
+    std::vector<int> types;
+    _impl->Receive(msgs, types);
+    return _impl->ProcCMD(msgs, types);
 }
 
 int TCPClient::Receive(std::vector<std::string>& msgs)
 {
-    return _impl->Receive(msgs);
+    std::vector<int> types;
+    _impl->Receive(msgs, types);
+    return _impl->ProcCMD(msgs, types);
 }
 
 int TCPClient::Available()

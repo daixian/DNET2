@@ -3,11 +3,13 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 #include "Poco/BasicEvent.h"
 #include "Poco/Delegate.h"
 
 #include "TCPEvent.h"
+#include "../Accept.h"
 
 namespace dxlib {
 
@@ -20,9 +22,7 @@ namespace dxlib {
 class TCPClient
 {
   public:
-    TCPClient();
-
-    TCPClient(int port);
+    TCPClient(const std::string& name = "TCPClient");
 
     ~TCPClient();
 
@@ -35,11 +35,13 @@ class TCPClient
      * @author daixian
      * @date 2020/12/23
      *
-     * @param          tcpID  Identifier for the TCP.
-     * @param [in,out] socket If non-null, the socket.
-     * @param [in,out] obj    The object.
+     * @param          tcpID         Identifier for the TCP.
+     * @param [in,out] socket        If non-null, the socket.
+     * @param [in,out] clientManager If non-null, manager for client.
+     * @param [in,out] obj           The object.
      */
-    static void CreateWithServer(int tcpID, void* socket, TCPClient& obj);
+    static void CreateWithServer(int tcpID, void* socket, void* clientManager,
+                                 TCPClient& obj);
 
     /**
      * 如果有就是它的tcpID,没有则是-1
@@ -50,6 +52,16 @@ class TCPClient
      * @returns The tcpid.
      */
     int TcpID();
+
+    /**
+     * Sets TCP identifier
+     *
+     * @author daixian
+     * @date 2021/1/9
+     *
+     * @param  tcpID Identifier for the TCP.
+     */
+    void SetTcpID(int tcpID);
 
     /**
      * 返回这个客户端的UUID.
@@ -70,6 +82,26 @@ class TCPClient
      * @returns A std::string.
      */
     std::string SetUUID(const std::string& uuid);
+
+    /**
+     * 客户端和服务器之间的认证数据.
+     *
+     * @author daixian
+     * @date 2021/1/9
+     *
+     * @returns Null if it fails, else a pointer to an Accept.
+     */
+    Accept* AcceptData();
+
+    /**
+     * 是否已经通过了认证
+     *
+     * @author daixian
+     * @date 2020/12/24
+     *
+     * @returns True if accepted, false if not.
+     */
+    bool isAccepted();
 
     /**
      * 关闭TCP客户端
@@ -204,7 +236,8 @@ class TCPClient
 
   private:
     class Impl;
-    Impl* _impl;
+    // 使用智能指针来拷贝.
+    std::shared_ptr<Impl> _impl;
 };
 
 } // namespace dxlib
