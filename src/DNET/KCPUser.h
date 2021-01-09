@@ -19,7 +19,14 @@ namespace dxlib {
 class KCPUser
 {
   public:
-    KCPUser(Poco::Net::DatagramSocket* socket, int conv) : socket(socket), conv(conv)
+    KCPUser(Poco::Net::DatagramSocket* socket, int conv)
+        : socket(socket), conv(conv)
+    {
+        buffer.resize(4 * 4096);
+    }
+
+    KCPUser(Poco::Net::DatagramSocket* socket, int conv, const Accept& accept)
+        : socket(socket), conv(conv), accept(accept)
     {
         buffer.resize(4 * 4096);
     }

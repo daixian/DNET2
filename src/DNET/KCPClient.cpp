@@ -199,8 +199,8 @@ class KCPClient::Impl
 
                 Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
 
-                KCPUser* kcpUser = new KCPUser(socket, conv);
-                kcpUser->accept = *clientTempAccept; //拷贝accept对象
+                KCPUser* kcpUser = new KCPUser(socket, conv, *clientTempAccept);
+                //kcpUser->accept=Accept(*clientTempAccept); //拷贝accept对象
                 kcpUser->uuid_remote = uuidS;
                 kcpUser->name_remote = nameS;
                 kcpUser->remote = tcs->peerAddress(); //使用实际的远程端口就行了应该

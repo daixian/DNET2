@@ -47,6 +47,20 @@ Accept::~Accept()
     delete _impl;
 }
 
+Accept::Accept(const Accept& obj)
+{
+    _impl = new Impl();
+    _impl->dto = obj._impl->dto;
+    _impl->isVerified = obj._impl->isVerified;
+}
+
+Accept& Accept::operator=(const Accept& obj)
+{
+    _impl->dto = obj._impl->dto;
+    _impl->isVerified = obj._impl->isVerified;
+    return *this;
+}
+
 std::string Accept::CreateAcceptString(const std::string& uuidC, const std::string& nameC)
 {
 

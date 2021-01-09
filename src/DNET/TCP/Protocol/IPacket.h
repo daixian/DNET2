@@ -24,12 +24,14 @@ class IPacket
      * @author daixian
      * @date 2020/12/21
      *
-     * @param  data If non-null, the data.
-     * @param  len  The length.
+     * @param       data   要打包的原始数据.
+     * @param       len    The length.
+     * @param [out] result The result.
+     * @param       type   (Optional) 数据类型(如可以分成命令和用户数据两种).
      *
-     * @returns A std::vector<char>
+     * @returns 打包结果长度.
      */
-    virtual int Pack(const char* data, int len, std::vector<char>& result) = 0;
+    virtual int Pack(const char* data, int len, std::vector<char>& result, int type) = 0;
 
     /**
      * Packs
@@ -37,12 +39,14 @@ class IPacket
      * @author daixian
      * @date 2020/12/21
      *
-     * @param  data If non-null, the data.
-     * @param  len  The length.
+     * @param       data   要打包的原始数据.
+     * @param       len    原始数据长度.
+     * @param [out] result The result.
+     * @param       type   (Optional) The type.
      *
-     * @returns A std::vector<char>
+     * @returns 打包结果长度.
      */
-    virtual int Pack(const char* data, int len, std::string& result) = 0;
+    virtual int Pack(const char* data, int len, std::string& result, int type) = 0;
 
     /**
      * Packs
@@ -50,14 +54,15 @@ class IPacket
      * @author daixian
      * @date 2020/12/21
      *
-     * @param  data      The data.
-     * @param  len       The length.
-     * @param  buffer    The buffer.
-     * @param  bufferLen Length of the buffer.
+     * @param       data      要打包的原始数据.
+     * @param       len       原始数据长度.
+     * @param [out] buffer    The buffer.
+     * @param       bufferLen Length of the buffer.
+     * @param       type      (Optional) The type.
      *
      * @returns 如果成功,返回打包后的数据长度.
      */
-    virtual int Pack(const char* data, int len, char* buffer, int bufferLen) = 0;
+    virtual int Pack(const char* data, int len, char* buffer, int bufferLen, int type) = 0;
 
     /**
      * Unpacks
@@ -66,12 +71,13 @@ class IPacket
      * @date 2020/12/21
      *
      * @param       receBuff Buffer for rece data.
-     * @param       count    Number of.
-     * @param [out] result   The result.
+     * @param       len      Number of.
+     * @param [out] result   解包数据.
+     * @param [out] type     解包数据类型.
      *
      * @returns 如果解析到了完整数据包,返回解析到的结果个数.
      */
-    virtual int Unpack(const char* receBuff, int count, std::vector<std::vector<char>>& result) = 0;
+    virtual int Unpack(const char* receBuff, int len, std::vector<std::vector<char>>& result, std::vector<int>& types) = 0;
 
     /**
      * Unpacks
@@ -80,12 +86,13 @@ class IPacket
      * @date 2020/12/21
      *
      * @param       receBuff Buffer for rece data.
-     * @param       count    Number of.
-     * @param [out] result   The result.
+     * @param       len      Number of.
+     * @param [out] result   解包数据.
+     * @param [out] type     解包数据类型.
      *
      * @returns 如果解析到了完整数据包,返回解析到的结果个数.
      */
-    virtual int Unpack(const char* receBuff, int count, std::vector<std::string>& result) = 0;
+    virtual int Unpack(const char* receBuff, int len, std::vector<std::string>& result, std::vector<int>& types) = 0;
 
     /**
      * 当前是否有不完整的解析的数据还在缓存里面.

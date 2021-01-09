@@ -15,7 +15,7 @@ namespace dxlib {
 class KCPEventAccept
 {
   public:
-    KCPEventAccept(int convID, Accept& accept) : convID(convID), accept(accept) {}
+    KCPEventAccept(int convID, const Accept& accept) : convID(convID), accept(accept) {}
     ~KCPEventAccept() {}
 
     // tcp连接里的id

@@ -166,7 +166,7 @@ class TCPClient::Impl
         }
         //数据打包
         std::vector<char> package;
-        packet.Pack(data, (int)len, package);
+        packet.Pack(data, (int)len, package, 1); //规定用户数据类型为1
 
         int sendCount = 0;
         for (size_t i = 0; i < 10; i++) {
@@ -203,6 +203,8 @@ class TCPClient::Impl
     int Receive(std::vector<std::vector<char>>& msgs)
     {
         msgs.clear();
+        std::vector<int> types; //消息的类型
+
         if (!isConnected) {
             return -1;
         }
@@ -216,7 +218,7 @@ class TCPClient::Impl
         while (true) {
             if (socket.available() > 0) {
                 int res = socket.receiveBytes(receBuff.data(), (int)receBuff.size());
-                packet.Unpack(receBuff.data(), res, msgs);
+                packet.Unpack(receBuff.data(), res, msgs, types);
                 if (res <= 0) {
                     break;
                 }
@@ -242,6 +244,8 @@ class TCPClient::Impl
     int Receive(std::vector<std::string>& msgs)
     {
         msgs.clear();
+        std::vector<int> types; //消息的类型
+
         if (!isConnected) {
             return -1;
         }
@@ -256,7 +260,7 @@ class TCPClient::Impl
         while (true) {
             if (socket.available() > 0) {
                 int res = socket.receiveBytes(receBuff.data(), (int)receBuff.size());
-                packet.Unpack(receBuff.data(), res, msgs);
+                packet.Unpack(receBuff.data(), res, msgs, types);
                 if (res <= 0) {
                     break;
                 }

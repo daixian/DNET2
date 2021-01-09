@@ -15,6 +15,8 @@ class Accept
   public:
     Accept();
     ~Accept();
+    Accept(const Accept& obj);
+    Accept& operator=(const Accept& obj);
 
     // 这个认证是否加密
     bool isEncrypt = false;
