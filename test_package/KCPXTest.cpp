@@ -2,7 +2,7 @@
 
 #include "DNET/TCP/TCPServer.h"
 #include "DNET/TCP/TCPClient.h"
-#include "DNET/KCPClient.h"
+#include "DNET/TCP/KCPClient.h"
 
 #include <thread>
 #include "dlog/dlog.h"

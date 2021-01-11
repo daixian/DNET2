@@ -2,7 +2,7 @@
 
 #include <string>
 #include <vector>
-#include "../Accept.h"
+#include "Accept.h"
 
 namespace dxlib {
 

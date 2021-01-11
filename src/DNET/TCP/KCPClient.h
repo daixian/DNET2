@@ -9,7 +9,7 @@
 
 #include "Accept.h"
 
-#include "./kcp/ikcp.h"
+#include "../kcp/ikcp.h"
 
 namespace dxlib {
 

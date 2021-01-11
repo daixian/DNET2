@@ -9,7 +9,7 @@
 #include "Poco/Delegate.h"
 
 #include "TCPEvent.h"
-#include "../Accept.h"
+#include "Accept.h"
 
 namespace dxlib {
 

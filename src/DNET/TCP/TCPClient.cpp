@@ -15,7 +15,7 @@
 
 #include <thread>
 
-#include "../KCPClient.h"
+#include "KCPClient.h"
 
 #define XUEXUE_TCP_CLIENT_BUFFER_SIZE 8 * 1024
 

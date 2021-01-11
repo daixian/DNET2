@@ -1,11 +1,11 @@
 ﻿#include "gtest/gtest.h"
-#include "DNET/KCP.h"
-#include "DNET/KCP2.h"
+// #include "DNET/KCP.h"
+// #include "DNET/KCP2.h"
 #include <thread>
 #include "dlog/dlog.h"
 #include <atomic>
 
-using namespace dxlib;
+// using namespace dxlib;
 using namespace std;
 
 //一种Task的工作模式

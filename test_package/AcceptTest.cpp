@@ -1,6 +1,6 @@
 ﻿#include "gtest/gtest.h"
-#include "DNET/KCP.h"
-#include "DNET/Accept.h"
+
+#include "DNET/TCP/Accept.h"
 #include <thread>
 #include "dlog/dlog.h"
 #include <atomic>

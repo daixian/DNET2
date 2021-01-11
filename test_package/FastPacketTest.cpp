@@ -1,5 +1,5 @@
 ﻿#include "gtest/gtest.h"
-#include "DNET/KCP.h"
+
 #include "DNET/TCP/Protocol/FastPacket.h"
 #include <thread>
 #include "dlog/dlog.h"

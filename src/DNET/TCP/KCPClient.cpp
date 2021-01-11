@@ -16,14 +16,15 @@
 #include "Poco/RunnableAdapter.h"
 #include "Poco/UUIDGenerator.h"
 
-#include "./kcp/ikcp.h"
+#include "../kcp/ikcp.h"
+#include "../kcp/clock.hpp"
 
 #include <thread>
 #include <mutex>
-#include "clock.hpp"
+
 #include <regex>
 
-#include "TCP/TCPClient.h"
+#include "TCPClient.h"
 
 namespace dxlib {
 
