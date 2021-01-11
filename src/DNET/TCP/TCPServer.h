@@ -152,6 +152,19 @@ class TCPServer
     int WaitAvailable(int tcpID, int waitCount = 50);
 
     /**
+     * 等待Accepte完成.会调用Receive()函数.
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @param  tcpID     Identifier for the TCP.
+     * @param  waitCount (Optional) Number of waits.
+     *
+     * @returns An int.
+     */
+    int WaitAccepted(int tcpID, int waitCount = 50);
+
+    /**
      * 尝试非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
      *
      * @author daixian

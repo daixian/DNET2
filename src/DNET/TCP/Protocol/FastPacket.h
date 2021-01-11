@@ -123,6 +123,7 @@ class FastPacket : public IPacket
     virtual int Unpack(const char* receBuff, int count, std::vector<std::vector<char>>& result, std::vector<int>& types) override
     {
         //result.clear();
+        int msgCount = 0;
 
         int curIndex = 0;
         while (curIndex < count) {
@@ -187,6 +188,7 @@ class FastPacket : public IPacket
                         _unpackDataBuff.push_back(receBuff[i]);
                         if (_unpackDataBuff.size() == curMsgLen) {
                             //当前解析到了一条完整消息
+                            msgCount++;
                             result.push_back(_unpackDataBuff);
                             types.push_back(curMsgType);
 
@@ -209,7 +211,7 @@ class FastPacket : public IPacket
             }
         }
 
-        return (int)result.size();
+        return msgCount;
     }
 
     /**
@@ -229,6 +231,7 @@ class FastPacket : public IPacket
     {
         //result.clear();
 
+        int msgCount = 0;
         int curIndex = 0;
         while (curIndex < count) {
             if (!isHasHead) {
@@ -292,6 +295,7 @@ class FastPacket : public IPacket
                         _unpackDataBuff.push_back(receBuff[i]);
                         if (_unpackDataBuff.size() == curMsgLen) {
                             //当前解析到了一条完整消息
+                            msgCount++;
                             result.push_back(std::string(_unpackDataBuff.data(), _unpackDataBuff.size()));
                             types.push_back(curMsgType);
 
@@ -314,7 +318,7 @@ class FastPacket : public IPacket
             }
         }
 
-        return (int)result.size();
+        return msgCount;
     }
 
     /**

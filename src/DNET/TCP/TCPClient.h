@@ -101,7 +101,19 @@ class TCPClient
      *
      * @returns True if accepted, false if not.
      */
-    bool isAccepted();
+    bool IsAccepted();
+
+    /**
+     * 等待Accepte完成.会调用Receive()函数.
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @param  waitCount (Optional) Number of waits.
+     *
+     * @returns An int.
+     */
+    int WaitAccepted(int waitCount = 50);
 
     /**
      * 关闭TCP客户端
@@ -211,7 +223,7 @@ class TCPClient
      *
      * @returns A reference to a Poco::BasicEvent<TCPEvent>
      */
-    Poco::BasicEvent<TCPEventAccept>& EventConnect();
+    Poco::BasicEvent<TCPEventAccept>& EventAccept();
 
     /**
      * 得到关闭的事件.

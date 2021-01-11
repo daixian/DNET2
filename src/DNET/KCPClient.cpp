@@ -21,7 +21,6 @@
 #include <mutex>
 #include "clock.hpp"
 #include <regex>
-#include "Accept.h"
 
 #include "TCP/TCPClient.h"
 
@@ -61,51 +60,41 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
 
 KCPClient::KCPClient()
 {
-    socketBuffer.resize(8 * 1024);
-    kcpReceBuf.resize(8 * 1024);
+    socketBuffer.resize(4 * 1024);
+    kcpReceBuf.resize(4 * 1024);
 }
 
 KCPClient::~KCPClient()
 {
 }
 
-void KCPClient::Bind(void* tcp)
+void KCPClient::Create(int conv)
 {
-    TCPClient* tcpClient = (TCPClient*)tcp;
-    if (tcpClient->isAccepted()) {
-        std::string uuidS = tcpClient->AcceptData()->uuidS;
-        std::string nameS = tcpClient->AcceptData()->nameS;
-        int conv = tcpClient->AcceptData()->conv;
+    kcp = ikcp_create(conv, this);
+    // 设置回调函数
+    kcp->output = kcpc_udp_output;
 
-        Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)tcpClient->Socket();
-        Poco::Net::SocketAddress sAddr = tcs->address();
+    ikcp_nodelay(kcp, 1, 10, 2, 1);
+    //kcp->rx_minrto = 10;
+    //kcp->fastresend = 1;
+}
 
-        socket = new Poco::Net::DatagramSocket(sAddr); //使用和TCP端口相同的端口开始一个UDP接收
-        socket->setBlocking(false);                    //它可以设置是否是阻塞
+void KCPClient::Bind(void* streamSocket)
+{
+    Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)streamSocket;
+    Poco::Net::SocketAddress sAddr = tcs->address();
 
-        remote = tcs->peerAddress(); //使用实际的远程端口就行了应该
-
-        kcp = ikcp_create(conv, this);
-        // 设置回调函数
-        kcp->output = kcpc_udp_output;
-
-        ikcp_nodelay(kcp, 1, 10, 2, 1);
-        //kcp->rx_minrto = 10;
-        //kcp->fastresend = 1;
-    }
+    socket = new Poco::Net::DatagramSocket(sAddr); //使用和TCP端口相同的端口开始一个UDP接收
+    socket->setBlocking(false);                    //它可以设置是否是阻塞
+    remote = tcs->peerAddress();                   //使用实际的远程端口就行了应该
 }
 
 int KCPClient::Receive(std::vector<std::string>& msgs)
 {
-    if (socket == nullptr) {
+    if (socket == nullptr || kcp == nullptr) {
         LogE("KCPClient.Receive():还没有初始化,不能接收!");
         return -1;
     }
-
-    if (kcp == nullptr) {
-        return -1;
-    }
-    int rece;
 
     try {
         //socket尝试接收
@@ -115,7 +104,7 @@ int KCPClient::Receive(std::vector<std::string>& msgs)
             LogD("KCPClient.Receive(): Socket接收到了数据,长度%d", n);
 
             //尝试给kcp看看是否是它的信道的数据
-            rece = ikcp_input(kcp, socketBuffer.data(), n);
+            int rece = ikcp_input(kcp, socketBuffer.data(), n);
             if (rece == -1) {
                 //conv不对应
             }
@@ -138,15 +127,13 @@ int KCPClient::Receive(std::vector<std::string>& msgs)
         LogE("KCPClient.Receive():异常:%s", e.what());
     }
 
-    return (int)receData.size();
-
     msgs.clear();
 
     msgs = receData;
     receData.clear();
 
     ikcp_update(kcp, iclock()); //需要定时调用.在调用接收或者发送之后调用好了
-    return msgs.size();
+    return (int)msgs.size();
 }
 
 int KCPClient::Send(const char* data, size_t len)

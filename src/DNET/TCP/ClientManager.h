@@ -22,6 +22,9 @@ class ClientManager
     // 有了uuid返回的及客户端记录
     std::map<std::string, TCPClient*> mAcceptClients;
 
+    // 用户连接成功的事件.
+    Poco::BasicEvent<TCPEventAccept>* eventAccept = nullptr;
+
     /**
      * 服务器添加一个客户端进来记录.
      *
@@ -34,7 +37,7 @@ class ClientManager
      */
     TCPClient* AddClient(Poco::Net::StreamSocket& client)
     {
-        TCPClient* tcobj = new TCPClient();
+        TCPClient* tcobj = new TCPClient("TCPServer");
         TCPClient::CreateWithServer(_clientCount, &client, this, *tcobj); //这个函数传入一个tcpID
         mClients[_clientCount] = tcobj;
         _clientCount++; //永远递增
@@ -78,7 +81,7 @@ class ClientManager
     }
 
     /**
-     * Registers the client with uuid described by uuid
+     * 服务器端的客户端在accept的时候会调用这个函数.
      *
      * @author daixian
      * @date 2021/1/9
@@ -105,7 +108,13 @@ class ClientManager
             mAcceptClients[uuid] = client;
         }
 
-        poco_assert(mClients.size() == mAcceptClients.size());
+        LogI("ClientManager.RegisterClientWithUUID():当前的连接的客户端个数%d,其中通过Accept的个数%d", mClients.size(), mAcceptClients.size());
+
+        //发出事件
+        if (eventAccept != nullptr) {
+            eventAccept->notify(client, TCPEventAccept(client->TcpID(), client->AcceptData()));
+        }
+
         return client->TcpID();
     }
 

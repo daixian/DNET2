@@ -39,7 +39,7 @@ class TCPClient::Impl
     // 名字.
     std::string name = "TCPClient";
 
-    // 设置这个是服务器
+    // 设置这个是服务器，当这个client是服务器端的时候会有使用它
     ClientManager* clientManager = nullptr;
 
     // 一个tcp的ID.
@@ -66,8 +66,14 @@ class TCPClient::Impl
     // 是否已经网络错误了
     bool isError = false;
 
+    // 所有接受到的消息的总条数
+    int receMsgCount = 0;
+
+    // 所有接受到的消息的总条数
+    int sendMsgCount = 0;
+
     // 用户连接成功的事件.
-    Poco::BasicEvent<TCPEventAccept> eventConnect;
+    Poco::BasicEvent<TCPEventAccept> eventAccept;
 
     // 客户端关闭的事件
     Poco::BasicEvent<TCPEventClose> eventClose;
@@ -177,6 +183,7 @@ class TCPClient::Impl
         //数据打包
         std::vector<char> package;
         packet.Pack(data, (int)len, package, type);
+        sendMsgCount++; //计数
 
         int sendCount = 0;
         for (size_t i = 0; i < 10; i++) {
@@ -225,6 +232,7 @@ class TCPClient::Impl
         return (int)msgs.size();
     }
 
+    // 使用所有接受到的消息然后过滤其中的CMD消息
     int ProcCMD(std::vector<std::vector<char>>& msgs, std::vector<int>& types)
     {
         //遍历所有收到的消息
@@ -256,7 +264,7 @@ class TCPClient::Impl
 
             if (!acceptData->VerifyAccept(acceptStr)) {
                 // replyStr为空,非法的认证信息
-                LogE("TCPClient.ProcCMD():非法的认证信息!");
+                LogE("TCPClient.ProcAccept():非法的认证信息!");
             }
             else {
                 // 重新指向分配过的tcpID
@@ -266,12 +274,13 @@ class TCPClient::Impl
                 // replyStr有内容,有效的认证信息,自己是服务器端
                 Send(replyStr.c_str(), replyStr.size(), 0);
 
-                LogI("TCPClient.ProcCMD():添加了一个新客户端%s,Addr=%s:%d,分配conv=%d", acceptData->uuidC,
+                LogI("TCPClient.ProcAccept():添加了一个新客户端%s,Addr=%s:%d,分配conv=%d",
+                     acceptData->uuidC.c_str(),
                      socket.peerAddress().host().toString().c_str(),
-                     socket.peerAddress().port(), tcpID);
+                     socket.peerAddress().port(),
+                     tcpID);
 
-                //发出这个事件消息
-                eventConnect.notify(this, TCPEventAccept(tcpID, acceptData));
+                // 这里clientManager会发出事件
             }
         }
         else {
@@ -280,7 +289,7 @@ class TCPClient::Impl
                 //服务器返回的Accept验证成功
                 poco_assert(acceptData->conv >= 0);
 
-                eventConnect.notify(this, TCPEventAccept(tcpID, acceptData));
+                eventAccept.notify(this, TCPEventAccept(tcpID, acceptData));
             }
         }
     }
@@ -323,10 +332,10 @@ class TCPClient::Impl
         while (true) {
             if (socket.available() > 0) {
                 int res = socket.receiveBytes(receBuff.data(), (int)receBuff.size());
-                packet.Unpack(receBuff.data(), res, msgs, types);
                 if (res <= 0) {
                     break;
                 }
+                receMsgCount += packet.Unpack(receBuff.data(), res, msgs, types);
             }
             else {
                 break;
@@ -400,10 +409,6 @@ void TCPClient::CreateWithServer(int tcpID, void* socket, void* clientManager,
     obj._impl->clientManager = (ClientManager*)clientManager;
     obj._impl->socket = *(Poco::Net::StreamSocket*)socket; //拷贝一次
 
-    //obj._impl->eventConnect = *pTCPEventAccept;
-    //obj._impl->eventClose = *pTCPEventClose;
-    //obj._impl->eventRemoteClose = *pTCPEventRemoteClose;
-
     obj._impl->isConnected = true;
 
     //setopt timeout
@@ -425,6 +430,7 @@ int TCPClient::TcpID()
 {
     return _impl->tcpID;
 }
+
 void TCPClient::SetTcpID(int tcpID)
 {
     _impl->tcpID = tcpID;
@@ -446,11 +452,12 @@ Accept* TCPClient::AcceptData()
     return _impl->acceptData;
 }
 
-bool TCPClient::isAccepted()
+bool TCPClient::IsAccepted()
 {
     if (_impl->acceptData != nullptr) {
         return _impl->acceptData->isVerified();
     }
+    return false;
 }
 
 void TCPClient::Close()
@@ -508,14 +515,29 @@ int TCPClient::WaitAvailable(int waitCount)
     return 0;
 }
 
+int TCPClient::WaitAccepted(int waitCount)
+{
+    for (size_t i = 0; i < waitCount; i++) {
+        std::vector<std::string> msgs;
+        Receive(msgs);
+
+        if (IsAccepted()) { //这里应该是错误,就不用等了
+            return 1;
+        }
+        //等待100ms
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    return 0;
+}
+
 void* TCPClient::Socket()
 {
     return &_impl->socket;
 }
 
-Poco::BasicEvent<TCPEventAccept>& TCPClient::EventConnect()
+Poco::BasicEvent<TCPEventAccept>& TCPClient::EventAccept()
 {
-    return _impl->eventConnect;
+    return _impl->eventAccept;
 }
 
 Poco::BasicEvent<TCPEventClose>& TCPClient::EventClose()

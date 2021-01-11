@@ -18,19 +18,15 @@ TEST(Accept, CreateAcceptString)
         Accept acceptS;
         std::string str2 = acceptS.ReplyAcceptString(str, "uuid_service", "service", i);
 
-        std::string serUUID;
-        std::string serName;
-        int conv = 0;
-        bool success = accept.VerifyReplyAccept(str2, serUUID, serName, conv);
+        bool success = accept.VerifyReplyAccept(str2);
         ASSERT_TRUE(success);
-        ASSERT_EQ(serUUID, "uuid_service");
-        ASSERT_EQ(serName, "service");
-        ASSERT_EQ(accept.nameC(), "clinet");
-        ASSERT_EQ(accept.nameS(), "service");
-        ASSERT_EQ(accept.uuidC(), "uuid_clinet");
-        ASSERT_EQ(accept.uuidS(), "uuid_service");
-        ASSERT_EQ(accept.conv(), i);
-        ASSERT_EQ(conv, i);
+        ASSERT_EQ(accept.uuidS, "uuid_service");
+        ASSERT_EQ(accept.nameS, "service");
+        ASSERT_EQ(accept.nameC, "clinet");
+        ASSERT_EQ(accept.nameS, "service");
+        ASSERT_EQ(accept.uuidC, "uuid_clinet");
+        ASSERT_EQ(accept.uuidS, "uuid_service");
+        ASSERT_EQ(accept.conv, i);
     }
 }
 
@@ -46,6 +42,6 @@ TEST(Accept, fail)
     std::string serUUID;
     std::string serName;
     int conv = 0;
-    bool success = accept.VerifyReplyAccept(str2, serUUID, serName, conv);
+    bool success = accept.VerifyReplyAccept(str2);
     ASSERT_FALSE(success);
 }

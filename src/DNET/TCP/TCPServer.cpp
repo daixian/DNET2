@@ -104,6 +104,8 @@ class TCPServer::Impl
         //随机生成一个uuid
         Poco::UUIDGenerator uuidGen;
         uuid = uuidGen.createRandom().toString();
+
+        clientManager.eventAccept = &eventAccept;
     }
     ~Impl()
     {
@@ -214,6 +216,16 @@ class TCPServer::Impl
         }
 
         return client->WaitAvailable(waitCount);
+    }
+
+    int WaitAccepted(int tcpID, int waitCount)
+    {
+        TCPClient* client = clientManager.GetClient(tcpID);
+        if (client == nullptr) { //客户端不存在
+            return -1;
+        }
+
+        return client->WaitAccepted(waitCount);
     }
 
     int Receive(std::map<int, std::vector<std::vector<char>>>& msgs)
@@ -348,6 +360,11 @@ int TCPServer::Receive(std::map<int, std::vector<std::string>>& msgs)
 int TCPServer::WaitAvailable(int tcpID, int waitCount)
 {
     return _impl->WaitAvailable(tcpID, waitCount);
+}
+
+int TCPServer::WaitAccepted(int tcpID, int waitCount)
+{
+    return _impl->WaitAccepted(tcpID, waitCount);
 }
 
 void* TCPServer::GetClientSocket(int tcpID)

@@ -45,7 +45,7 @@ class KCPClient
     Poco::Net::SocketAddress remote;
 
     // 这个远端之间的认证信息(每个kcp连接之间都有自己的认证随机Key)
-    Accept* accept;
+    Accept* accept = nullptr;
 
     // 远程对象列表
     ikcpcb* kcp = nullptr;
@@ -57,14 +57,22 @@ class KCPClient
     std::vector<std::string> receData;
 
     /**
-     * 绑定一个TCPClient.
+     * 创建一个kcp协议.
+     *
+     * @author daixian
+     * @date 2021/1/11
+     */
+    void Create(int conv);
+
+    /**
+     * 绑定一个TCP的Poco::Net::StreamSocket的端口，当tcp断线重连之后需要重新绑定这个.
      *
      * @author daixian
      * @date 2021/1/9
      *
-     * @param [in,out] tcplient If non-null, the tcplient.
+     * @param [in] streamSocket Poco::Net::StreamSocket对象指针.
      */
-    void Bind(void* tcpClient);
+    void Bind(void* streamSocket);
 
     /**
      * 非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.

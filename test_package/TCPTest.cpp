@@ -157,6 +157,7 @@ TEST(TCPServer, sendBytes)
         client.WaitAvailable();
         client.Receive(msgs);
         if (!msgs.empty()) {
+            ASSERT_TRUE(client.IsAccepted());
             ASSERT_EQ(msgs.size(), 1);
             ASSERT_EQ(msgs[0].size(), msg.size());
             LogI("客户端收到了服务器数据!");
@@ -258,6 +259,29 @@ TEST(TCPServer, sendText_128Client)
         clients[i].Connect("127.0.0.1", 8341);
     }
 
+    //等待所有客户端连接完成
+    while (true) {
+        std::map<int, std::vector<std::string>> msgs;
+        server.Receive(msgs); //无脑调用接收
+
+        int acceptCount = 0;
+        for (size_t i = 0; i < clients.size(); i++) {
+            std::vector<std::string> cmsgs;
+            clients[i].Receive(cmsgs); //无脑调用接收
+            if (clients[i].IsAccepted()) {
+                acceptCount++;
+            }
+        }
+        if (acceptCount == clients.size()) {
+            break;
+        }
+    }
+
+    //服务端的应该也已经认证通过了
+    for (auto& kvp : server.GetRemotes()) {
+        ASSERT_TRUE(kvp.second->IsAccepted());
+    }
+
     std::string msg = "1234567890";
     for (size_t i = 0; i < clients.size(); i++) {
         int res = clients[i].Send(msg.c_str(), msg.size());
@@ -265,10 +289,6 @@ TEST(TCPServer, sendText_128Client)
 
     //服务器接收
     {
-        for (auto& kvp : server.GetRemotes()) {
-            server.WaitAvailable(kvp.first); //等待所有的客户端...
-        }
-
         std::map<int, std::vector<std::string>> msgs;
         server.Receive(msgs);
         if (!msg.empty()) {
@@ -308,6 +328,24 @@ TEST(TCPServer, sendText2)
 
     TCPClient client;
     client.Connect("127.0.0.1", 8341);
+
+    //等待所有客户端连接完成
+    while (true) {
+        std::map<int, std::vector<std::string>> msgs;
+        server.Receive(msgs); //无脑调用接收
+
+        int acceptCount = 0;
+
+        std::vector<std::string> cmsgs;
+        client.Receive(cmsgs); //无脑调用接收
+        if (client.IsAccepted()) {
+            break;
+        }
+    }
+    //服务端的应该也已经认证通过了
+    for (auto& kvp : server.GetRemotes()) {
+        ASSERT_TRUE(kvp.second->IsAccepted());
+    }
 
     std::string msg = "1234567890";
     int res = client.Send(msg.c_str(), msg.size());
