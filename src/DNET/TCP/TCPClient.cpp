@@ -15,6 +15,8 @@
 
 #include <thread>
 
+#include "../KCPClient.h"
+
 #define XUEXUE_TCP_CLIENT_BUFFER_SIZE 8 * 1024
 
 namespace dxlib {
@@ -29,7 +31,10 @@ class TCPClient::Impl
         //随机生成一个uuid
         Poco::UUIDGenerator uuidGen;
         uuid = uuidGen.createRandom().toString();
+
+        kcpClient = std::shared_ptr<KCPClient>(new KCPClient());
     }
+
     ~Impl()
     {
         //析构的时候尝试关闭
@@ -51,6 +56,9 @@ class TCPClient::Impl
     // 客户端的socket
     Poco::Net::StreamSocket socket;
 
+    // 客户端的udp的socket,如果自己是客户端的时候使用它来管理.如果是server里的那么使用clientManager里的.
+    Poco::Net::DatagramSocket* udpSocket = nullptr;
+
     // TCP通信协议
     FastPacket packet;
 
@@ -59,6 +67,9 @@ class TCPClient::Impl
 
     // 接收用的buffer
     std::vector<char> receBuff;
+
+    // 接收用的buffer
+    std::vector<char> receBuffUDP;
 
     // 客户端和服务器端认证的数据
     Accept* acceptData = nullptr;
@@ -81,6 +92,18 @@ class TCPClient::Impl
     // 远程端关闭的事件
     Poco::BasicEvent<TCPEventRemoteClose> eventRemoteClose;
 
+    // 这个TCP可以附加绑定一个kcp
+    std::shared_ptr<KCPClient> kcpClient{nullptr};
+
+    // 是否是服务端的client
+    bool IsInServer()
+    {
+        if (clientManager == nullptr)
+            return false;
+        else
+            return true;
+    }
+
     /**
      * Connects
      *
@@ -94,6 +117,11 @@ class TCPClient::Impl
      */
     int Connect(const std::string& host, int port)
     {
+        if (IsInServer()) {
+            LogE("TCPClient.Connect():服务器端的Client不应该调用这个函数!");
+            return -1;
+        }
+
         using Poco::Timespan;
 
         Close(); //先试试无脑关闭
@@ -154,6 +182,16 @@ class TCPClient::Impl
                 socket.close();
             }
             catch (const std::exception&) {
+            }
+
+            if (udpSocket != nullptr) {
+                try {
+                    udpSocket->close();
+                    delete udpSocket;
+                    udpSocket = nullptr;
+                }
+                catch (const std::exception&) {
+                }
             }
 
             isConnected = false;
@@ -258,7 +296,7 @@ class TCPClient::Impl
     // 处理accept字符串
     void ProcAccept(std::string& acceptStr)
     {
-        if (clientManager != nullptr) {
+        if (IsInServer()) {
             //自己是服务器端
             acceptData = new Accept();
 
@@ -267,7 +305,7 @@ class TCPClient::Impl
                 LogE("TCPClient.ProcAccept():非法的认证信息!");
             }
             else {
-                // 重新指向分配过的tcpID
+                // 重新指向分配过的tcpID,这里clientManager会发出事件
                 clientManager->RegisterClientWithUUID(acceptData->uuidC, tcpID); //这个函数会重新分配tcpID
                 std::string replyStr = acceptData->ReplyAcceptString(acceptStr, uuid, name, tcpID);
                 poco_assert(!replyStr.empty());
@@ -280,17 +318,55 @@ class TCPClient::Impl
                      socket.peerAddress().port(),
                      tcpID);
 
-                // 这里clientManager会发出事件
+                //如果id不等那么说明没有继承原来的kcp
+                if (kcpClient->Conv() != tcpID) {
+                    kcpClient->Create(tcpID);
+                }
+
+                poco_assert(clientManager != nullptr);
+                kcpClient->isServer = true;
+                kcpClient->Bind(clientManager->acceptUDPSocket, socket.peerAddress());
             }
         }
         else {
             //自己是客户端
             if (acceptData->VerifyReplyAccept(acceptStr.data())) {
+                tcpID = acceptData->conv;
+
                 //服务器返回的Accept验证成功
                 poco_assert(acceptData->conv >= 0);
 
+                //如果id不等那么说明没有继承原来的kcp
+                if (kcpClient->Conv() != tcpID) {
+                    kcpClient->Create(tcpID);
+                }
+                InitUDPSocket();
+                kcpClient->isServer = false;
+                kcpClient->Bind(udpSocket, socket.peerAddress());
                 eventAccept.notify(this, TCPEventAccept(tcpID, acceptData));
             }
+        }
+    }
+
+    //根据当前TCPSocket的本地端口来绑定UDP.
+    void InitUDPSocket()
+    {
+        if (udpSocket != nullptr) {
+            LogE("TCPClient.InitUDPSocket():不太应该不为null...");
+            udpSocket->close();
+            delete udpSocket;
+        }
+
+        receBuffUDP.resize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);
+        try {
+            udpSocket = new Poco::Net::DatagramSocket(socket.address());
+            udpSocket->setBlocking(false);
+        }
+        catch (const Poco::Exception& e) {
+            LogE("TCPClient.InitUDPSocket():异常e=%s,%s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("TCPClient.InitUDPSocket():异常e=%s", e.what());
         }
     }
 
@@ -387,6 +463,31 @@ class TCPClient::Impl
 
         return (int)msgs.size();
     }
+
+    int KCPReceive(std::vector<std::string>& msgs)
+    {
+        if (udpSocket != nullptr) {
+            try {
+                //socket尝试接收
+                Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
+                int n = udpSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
+                return kcpClient->Receive(receBuffUDP.data(), n, msgs);
+            }
+            catch (const Poco::Exception& e) {
+                LogE("TCPClient.KCPReceive():异常e=%s,%s", e.what(), e.message().c_str());
+            }
+            catch (const std::exception& e) {
+                LogE("TCPClient.KCPReceive():异常e=%s", e.what());
+            }
+        }
+        else {
+            if (clientManager == nullptr) {
+                LogE("TCPClient.KCPReceive():clientManager==null");
+                return -1;
+            }
+            return kcpClient->Receive(clientManager->receBuffUDP.data(), clientManager->receLen, msgs);
+        }
+    }
 };
 
 TCPClient::TCPClient(const std::string& name)
@@ -445,6 +546,14 @@ std::string TCPClient::SetUUID(const std::string& uuid)
 {
     _impl->uuid = uuid;
     return _impl->uuid;
+}
+
+bool TCPClient::IsInServer()
+{
+    if (_impl->clientManager == nullptr)
+        return false;
+    else
+        return true;
 }
 
 Accept* TCPClient::AcceptData()
@@ -533,6 +642,37 @@ int TCPClient::WaitAccepted(int waitCount)
 void* TCPClient::Socket()
 {
     return &_impl->socket;
+}
+
+void* TCPClient::GetKCPClient()
+{
+    return _impl->kcpClient.get();
+}
+
+void TCPClient::MoveKCPClient(TCPClient* src)
+{
+    _impl->kcpClient = src->_impl->kcpClient;
+}
+
+int TCPClient::KCPSend(const char* data, size_t len)
+{
+    if (_impl->kcpClient == nullptr) {
+        return -1;
+    }
+    return _impl->kcpClient->Send(data, len);
+}
+
+int TCPClient::KCPReceive(std::vector<std::string>& msgs)
+{
+    return _impl->KCPReceive(msgs);
+}
+
+int TCPClient::KCPWaitSendCount()
+{
+    if (_impl->kcpClient == nullptr) {
+        return 0;
+    }
+    return _impl->kcpClient->WaitSendCount();
 }
 
 Poco::BasicEvent<TCPEventAccept>& TCPClient::EventAccept()

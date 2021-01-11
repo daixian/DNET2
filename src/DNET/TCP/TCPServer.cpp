@@ -38,6 +38,20 @@ class TCPAcceptRunnable : public Poco::Runnable
                       ClientManager* clientManager)
         : address(address), eventAccept(eventAccept), clientManager(clientManager)
     {
+        try {
+            socket = new Poco::Net::ServerSocket(address);
+            socket->setBlocking(false);
+
+            LogI("TCPServer.Start():TCPServer开始监听(%s:%d)...", address.host().toString().c_str(), address.port());
+        }
+        catch (const Poco::Exception& e) {
+            LogE("TCPAcceptRunnable.构造():异常e=%s,%s", e.what(), e.message().c_str());
+            isRun = false;
+        }
+        catch (const std::exception& e) {
+            LogE("TCPAcceptRunnable.构造():异常e=%s", e.what());
+            isRun = false;
+        }
     }
 
     virtual ~TCPAcceptRunnable()
@@ -46,13 +60,11 @@ class TCPAcceptRunnable : public Poco::Runnable
 
     virtual void run()
     {
-        socket = new Poco::Net::ServerSocket(address);
 
-        socket->setBlocking(false);
-        LogI("TCPServer.Start():TCPServer开始监听(%s:%d)...", address.host().toString().c_str(), address.port());
         Poco::Timespan span(250000);
         while (isRun) {
             try {
+                // 注意这里是异步poll调用了
                 if (socket->poll(span, Poco::Net::Socket::SELECT_READ)) {
                     Poco::Net::StreamSocket streamSocket = socket->acceptConnection(); //这个函数是阻塞的
                     streamSocket.setBlocking(false);
@@ -73,12 +85,18 @@ class TCPAcceptRunnable : public Poco::Runnable
             }
         }
 
-        try {
-            socket->close();
+        if (socket != nullptr) {
+            try {
+                socket->close();
+            }
+            catch (const Poco::Exception& e) {
+                LogE("TCPAcceptRunnable.run():关闭TCPServer Socket异常e=%s,%s", e.what(), e.message().c_str());
+            }
+            catch (const std::exception& e) {
+                LogE("TCPAcceptRunnable.run():关闭TCPServer Socket异常e=%s", e.what());
+            }
+            delete socket;
         }
-        catch (const std::exception&) {
-        }
-        delete socket;
     }
 
     // 是否运行
@@ -91,9 +109,9 @@ class TCPAcceptRunnable : public Poco::Runnable
     Poco::Net::ServerSocket* socket = nullptr;
 
   private:
-    Poco::BasicEvent<TCPEventAccept>* eventAccept;
+    Poco::BasicEvent<TCPEventAccept>* eventAccept = nullptr;
 
-    ClientManager* clientManager;
+    ClientManager* clientManager = nullptr;
 };
 
 class TCPServer::Impl
@@ -146,6 +164,8 @@ class TCPServer::Impl
 
         //socket = new Poco::Net::ServerSocket(sAddr);
         // socket->setBlocking(true); //这里不能设置为false,因为Accept的时候只能Block,执行Accept函数的时候会直接异常.
+        clientManager.acceptUDPSocket = new Poco::Net::DatagramSocket(sAddr);
+        clientManager.acceptUDPSocket->setBlocking(false);
 
         acceptRunnable = new TCPAcceptRunnable(sAddr, &eventAccept, &clientManager);
         acceptThread = new Poco::Thread("AcceptRunnableThread");
@@ -160,6 +180,20 @@ class TCPServer::Impl
 
         //关闭所有客户端
         clientManager.Clear();
+
+        if (clientManager.acceptUDPSocket != nullptr) {
+            try {
+                clientManager.acceptUDPSocket->close();
+                delete clientManager.acceptUDPSocket;
+            }
+            catch (const Poco::Exception& e) {
+                LogE("TCPAcceptRunnable.run():关闭UDPSocket异常e=%s,%s", e.what(), e.message().c_str());
+            }
+            catch (const std::exception& e) {
+                LogE("TCPAcceptRunnable.run():关闭UDPSocket异常e=%s", e.what());
+            }
+            clientManager.acceptUDPSocket = nullptr;
+        }
 
         if (acceptRunnable != nullptr) {
             acceptRunnable->isRun = false;
@@ -242,6 +276,8 @@ class TCPServer::Impl
             if (itr->second->isError()) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
                 eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
+
+                clientManager.mAcceptClients.erase(itr->second->AcceptData()->uuidC);
                 delete itr->second;
                 itr = clientManager.mClients.erase(itr);
             }
@@ -267,12 +303,45 @@ class TCPServer::Impl
             if (itr->second->isError()) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
                 eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
+
+                clientManager.mAcceptClients.erase(itr->second->AcceptData()->uuidC);
                 delete itr->second;
                 itr = clientManager.mClients.erase(itr);
             }
             else {
                 itr++;
             }
+        }
+        return (int)msgs.size();
+    }
+
+    int KCPSend(int tcpID, const char* data, size_t len)
+    {
+        TCPClient* client = clientManager.GetClient(tcpID);
+        if (client == nullptr) {
+            return -1;
+        }
+
+        return client->KCPSend(data, len); //发送打包后的数据
+    }
+
+    int KCPReceive(std::map<int, std::vector<std::string>>& msgs)
+    {
+        msgs.clear();
+
+        clientManager.KCPSocketReceive();
+
+        for (auto itr = clientManager.mClients.begin(); itr != clientManager.mClients.end();) {
+            std::vector<std::string> clientMsgs;
+            int res = itr->second->KCPReceive(clientMsgs);
+            //if (res == -1) {
+            //    continue;
+            //}
+            if (res > 0) {
+                msgs[itr->first] = clientMsgs;
+            }
+
+            itr++;
         }
         return (int)msgs.size();
     }
@@ -382,8 +451,16 @@ int TCPServer::RemoteCount()
 
 std::map<int, TCPClient*> TCPServer::GetRemotes()
 {
-
     return _impl->clientManager.mClients;
 }
 
+int TCPServer::KCPSend(int tcpID, const char* data, size_t len)
+{
+    return _impl->KCPSend(tcpID, data, len);
+}
+
+int TCPServer::KCPReceive(std::map<int, std::vector<std::string>>& msgs)
+{
+    return _impl->KCPReceive(msgs);
+}
 } // namespace dxlib

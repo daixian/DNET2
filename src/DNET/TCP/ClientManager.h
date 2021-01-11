@@ -6,6 +6,7 @@
 #include "TCPClient.h"
 
 #include "Poco/Net/StreamSocket.h"
+#include "Poco/Net/DatagramSocket.h"
 #include "dlog/dlog.h"
 
 namespace dxlib {
@@ -13,7 +14,10 @@ namespace dxlib {
 class ClientManager
 {
   public:
-    ClientManager() {}
+    ClientManager()
+    {
+        receBuffUDP.resize(8 * 1024);
+    }
     ~ClientManager() {}
 
     // 所有连接了的客户端.
@@ -95,12 +99,16 @@ class ClientManager
 
             TCPClient* oldclient = mAcceptClients[uuid];
             int tcpID = oldclient->TcpID();
-            delete oldclient;
+
+            client->MoveKCPClient(oldclient); //移动也就是继承kcp部分
+
             mAcceptClients[uuid] = client;
 
-            mClients[tcpID] = client;
-            mClients.erase(client->TcpID()); //移除新的tcpID
+            mClients[tcpID] = client;        //写到原先的位置
+            mClients.erase(client->TcpID()); //移除新的tcpID记录
             client->SetTcpID(tcpID);
+
+            delete oldclient;
             LogI("ClientManager.RegisterClientWithUUID():找到了之前的记录,断线重连~");
         }
         else {
@@ -137,6 +145,30 @@ class ClientManager
     }
 
     /**
+     * 根据tcpID删除两个map中的记录.
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @param  tcpID Identifier for the TCP.
+     *
+     * @returns Null if it fails, else a pointer to a TCPClient.
+     */
+    TCPClient* Erase(int tcpID)
+    {
+        if (mClients.find(tcpID) != mClients.end()) {
+            TCPClient* client = mClients[tcpID];
+            if (client->AcceptData() != nullptr) {
+                std::string uuid = client->AcceptData()->uuidC;
+                if (mAcceptClients.find(uuid) != mAcceptClients.end()) {
+                    mAcceptClients.erase(uuid);
+                }
+            }
+            mClients.erase(tcpID);
+        }
+    }
+
+    /**
      * 关闭所有客户端并且重置.
      *
      * @author daixian
@@ -151,6 +183,32 @@ class ClientManager
         _clientCount = 1;
 
         mAcceptClients.clear();
+    }
+
+    /************************** kcp ***********************************/
+
+    // tcp监听端口开的同端口UDP
+    Poco::Net::DatagramSocket* acceptUDPSocket = nullptr;
+
+    // 接收用的buffer
+    std::vector<char> receBuffUDP;
+
+    // 当前接收长度
+    int receLen = 0;
+
+    // KCP的接收
+    void KCPSocketReceive()
+    {
+        try { //socket尝试接收
+            Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
+            receLen = acceptUDPSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
+        }
+        catch (const Poco::Exception& e) {
+            LogE("TCPClient.InitUDPSocket():异常e=%s,%s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("TCPClient.InitUDPSocket():异常e=%s", e.what());
+        }
     }
 
   private:

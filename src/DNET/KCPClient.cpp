@@ -5,6 +5,7 @@
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/MulticastSocket.h"
 #include "Poco/Net/ServerSocket.h"
+#include "Poco/Net/NetException.h"
 
 #include "Poco/Task.h"
 #include "Poco/TaskManager.h"
@@ -49,27 +50,36 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
         return u->socket->sendTo(buf, len, u->remote);
     }
     catch (const Poco::Exception& e) {
-        LogE("KCPClient.udp_output():异常%s %s", e.what(), e.message().c_str());
+        LogE("KCPClient.kcpc_udp_output():异常%s %s", e.what(), e.message().c_str());
         return -1;
     }
     catch (const std::exception& e) {
-        LogE("KCPClient.udp_output():异常:%s", e.what());
+        LogE("KCPClient.kcpc_udp_output():异常:%s", e.what());
         return -1;
     }
 }
 
 KCPClient::KCPClient()
 {
-    socketBuffer.resize(4 * 1024);
+    //socketBuffer.resize(4 * 1024);
     kcpReceBuf.resize(4 * 1024);
 }
 
 KCPClient::~KCPClient()
 {
+    if (kcp != nullptr) {
+        ikcp_release(kcp);
+        kcp = nullptr;
+    }
 }
 
 void KCPClient::Create(int conv)
 {
+    if (kcp != nullptr) {
+        ikcp_release(kcp);
+        delete kcp;
+    }
+
     kcp = ikcp_create(conv, this);
     // 设置回调函数
     kcp->output = kcpc_udp_output;
@@ -79,52 +89,42 @@ void KCPClient::Create(int conv)
     //kcp->fastresend = 1;
 }
 
-void KCPClient::Bind(void* streamSocket)
+void KCPClient::Bind(Poco::Net::DatagramSocket* datagramSocket, const Poco::Net::SocketAddress& remote)
 {
-    Poco::Net::StreamSocket* tcs = (Poco::Net::StreamSocket*)streamSocket;
-    Poco::Net::SocketAddress sAddr = tcs->address();
-
-    socket = new Poco::Net::DatagramSocket(sAddr); //使用和TCP端口相同的端口开始一个UDP接收
-    socket->setBlocking(false);                    //它可以设置是否是阻塞
-    remote = tcs->peerAddress();                   //使用实际的远程端口就行了应该
+    this->socket = datagramSocket;
+    this->remote = remote;
 }
 
-int KCPClient::Receive(std::vector<std::string>& msgs)
+int KCPClient::Receive(const char* buff, size_t len, std::vector<std::string>& msgs)
 {
     if (socket == nullptr || kcp == nullptr) {
         LogE("KCPClient.Receive():还没有初始化,不能接收!");
-        return -1;
+        return -2;
     }
 
-    try {
-        //socket尝试接收
-        Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
-        int n = socket->receiveFrom(socketBuffer.data(), (int)socketBuffer.size(), remote);
-        if (n != -1) {
-            LogD("KCPClient.Receive(): Socket接收到了数据,长度%d", n);
+    //socket尝试接收
+    //Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
+    //int n = socket->receiveFrom(socketBuffer.data(), (int)socketBuffer.size(), remote);
 
-            //尝试给kcp看看是否是它的信道的数据
-            int rece = ikcp_input(kcp, socketBuffer.data(), n);
-            if (rece == -1) {
-                //conv不对应
-            }
-            else {
-                ikcp_flush(kcp); //尝试暴力flush
+    if (len != -1) {
+        //LogD("KCPClient.Receive(): Socket接收到了数据,长度%d", len);
 
-                while (rece >= 0) {
-                    rece = ikcp_recv(kcp, kcpReceBuf.data(), kcpReceBuf.size());
-                    if (rece > 0) {
-                        receData.push_back(std::string(kcpReceBuf.data(), rece)); //拷贝记录这一条收到的信息
-                    }
+        //尝试给kcp看看是否是它的信道的数据
+        int rece = ikcp_input(kcp, buff, len);
+        if (rece == -1) {
+            //conv不对应
+            return -1;
+        }
+        else {
+            ikcp_flush(kcp); //尝试暴力flush
+
+            while (rece >= 0) {
+                rece = ikcp_recv(kcp, kcpReceBuf.data(), kcpReceBuf.size());
+                if (rece > 0) {
+                    receData.push_back(std::string(kcpReceBuf.data(), rece)); //拷贝记录这一条收到的信息
                 }
             }
         }
-    }
-    catch (const Poco::Exception& e) {
-        LogE("KCPClient.Receive():异常%s,%s", e.what(), e.message().c_str());
-    }
-    catch (const std::exception& e) {
-        LogE("KCPClient.Receive():异常:%s", e.what());
     }
 
     msgs.clear();
@@ -148,8 +148,19 @@ int KCPClient::Send(const char* data, size_t len)
         LogE("KCPClient.Send():发送异常返回 res=%d", res);
     }
     ikcp_flush(kcp); //尝试暴力flush
+
     ikcp_update(kcp, iclock());
     return res;
+}
+
+// 查询等待发送的消息条数
+int KCPClient::WaitSendCount()
+{
+    if (socket == nullptr || kcp == nullptr) {
+        return 0;
+    }
+
+    return ikcp_waitsnd(kcp);
 }
 
 } // namespace dxlib

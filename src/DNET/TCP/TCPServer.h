@@ -220,6 +220,32 @@ class TCPServer
      */
     std::map<int, TCPClient*> GetRemotes();
 
+    /**
+     * Kcp send
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @param  tcpID Identifier for the TCP.
+     * @param  data  The data.
+     * @param  len   The length.
+     *
+     * @returns An int.
+     */
+    int KCPSend(int tcpID, const char* data, size_t len);
+
+    /**
+     * Kcp receive
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @param [in,out] msgs The msgs.
+     *
+     * @returns An int.
+     */
+    int KCPReceive(std::map<int, std::vector<std::string>>& msgs);
+
   private:
     class Impl;
     Impl* _impl;

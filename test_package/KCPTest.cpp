@@ -41,6 +41,8 @@ using namespace std;
 //    std::this_thread::sleep_for(std::chrono::milliseconds(10500));
 //}
 
+#if aaa0123
+
 //目前100条需要0.5秒
 TEST(KCP, Blocking_SendRece)
 {
@@ -236,3 +238,5 @@ TEST(KCP2, NoBlocking_SendRece_Two_Thread_Accept)
     thrRece.join();
     ASSERT_TRUE(count == 100);
 }
+
+#endif

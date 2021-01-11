@@ -84,6 +84,16 @@ class TCPClient
     std::string SetUUID(const std::string& uuid);
 
     /**
+     * 是否是Server端的Client.
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @returns True if in server, false if not.
+     */
+    bool IsInServer();
+
+    /**
      * 客户端和服务器之间的认证数据.
      *
      * @author daixian
@@ -214,6 +224,63 @@ class TCPClient
      * @returns Poco::Net::StreamSocket类型的指针.
      */
     void* Socket();
+
+    /**
+     * 得到KCPClient类型指针.
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @returns 一个KCPClient类型指针.
+     */
+    void* GetKCPClient();
+
+    /**
+     * 移动KCPClient的指针.
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @param [in] src 移动源,老的对象,移动给自己.
+     */
+    void MoveKCPClient(TCPClient* src);
+
+    /**
+     * 走kcp通道进行发送.
+     *
+     * @author daixian
+     * @date 2021/1/11
+     *
+     * @param  data The data.
+     * @param  len  The length.
+     *
+     * @returns An int.
+     */
+    int KCPSend(const char* data, size_t len);
+
+    /**
+     * KCP的接收.如果是服务器端的那么要调用ClientManger里的socket的接收.
+     *
+     * @author daixian
+     * @date 2020/12/22
+     *
+     * @param [out] msgs The msgs.
+     *
+     * @returns 接收到的数据条数.
+     */
+    int KCPReceive(std::vector<std::string>& msgs);
+
+    /**
+     * 当前等待发送的消息计数.如果这个数量太多,那么已经拥塞.
+     *
+     * @author daixian
+     * @date 2020/12/20
+     *
+     * @param  conv The convert.
+     *
+     * @returns An int.
+     */
+    int KCPWaitSendCount();
 
     /**
      * 得到Accept的事件.

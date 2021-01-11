@@ -7,7 +7,7 @@
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/MulticastSocket.h"
 
-#include "DNET/KCPClient.h"
+#include "DNET/TCP/TCPClient.h"
 
 using namespace dxlib;
 using namespace std;
@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
         config = JsonMapper::toObject<Config>(File::ReadAllText(configPath));
     }
 
-    KCPClient kcp_c("client");
+    TCPClient kcp_c("client");
     //kcp_c.SendAccept("127.0.0.1", 9991);
     kcp_c.Connect(config.host, config.port);
 
@@ -47,11 +47,11 @@ int main(int argc, char* argv[])
     int count = 0;
     std::vector<std::string> msgs;
     while (true) {
-        kcp_c.Receive(msgs);
+        kcp_c.KCPReceive(msgs);
         poco_assert(msgs.empty());
-        if (kcp_c.WaitSendCount() < 2) {
+        if (kcp_c.KCPWaitSendCount() < 2) {
             std::string str = "1234567890 - " + std::to_string(count);
-            int rece = kcp_c.Send(str.c_str(), str.size());
+            int rece = kcp_c.KCPSend(str.c_str(), str.size());
             LogI("发送条数=%d,result=%d", count, rece);
             count++;
         }

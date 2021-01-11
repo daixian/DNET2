@@ -1,5 +1,5 @@
 ﻿#include "xuexuejson/Serialize.hpp"
-#include "DNET/KCPServer.h"
+#include "DNET/TCP/TCPServer.h"
 
 #include "dlog/dlog.h"
 #include <thread>
@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     dlog_memory_log_enable(false);
     dlog_set_console_thr(dlog_level::info);
 
-    KCPServer kcp_s("server", "0.0.0.0", 9991);
+    TCPServer kcp_s("server", "0.0.0.0", 9991);
     kcp_s.Start();
 
     while (true) {
@@ -28,6 +28,16 @@ int main(int argc, char* argv[])
             for (auto& kvp : msgs) {
                 for (size_t i = 0; i < kvp.second.size(); i++) {
                     LogI("接收到了conv=%d:%s", kvp.first, kvp.second[i].c_str());
+                }
+            }
+        }
+
+        std::map<int, std::vector<std::string>> kcpmsgs;
+        kcp_s.KCPReceive(kcpmsgs);
+        if (!kcpmsgs.empty()) {
+            for (auto& kvp : kcpmsgs) {
+                for (size_t i = 0; i < kvp.second.size(); i++) {
+                    LogI("KCP接收到了conv=%d:%s", kvp.first, kvp.second[i].c_str());
                 }
             }
         }
