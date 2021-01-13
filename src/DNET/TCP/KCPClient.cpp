@@ -1,23 +1,9 @@
 ﻿#include "KCPClient.h"
 
-#include "dlog/dlog.h"
-
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/MulticastSocket.h"
 #include "Poco/Net/ServerSocket.h"
 #include "Poco/Net/NetException.h"
-
-#include "Poco/Task.h"
-#include "Poco/TaskManager.h"
-#include "Poco/TaskNotification.h"
-#include "Poco/Observer.h"
-#include "Poco/Thread.h"
-#include "Poco/Runnable.h"
-#include "Poco/RunnableAdapter.h"
-#include "Poco/UUIDGenerator.h"
-
-#include "../kcp/ikcp.h"
-#include "../kcp/clock.hpp"
 
 #include <thread>
 #include <mutex>
@@ -70,7 +56,6 @@ KCPClient::~KCPClient()
 {
     if (kcp != nullptr) {
         ikcp_release(kcp);
-        kcp = nullptr;
     }
 }
 
@@ -78,7 +63,6 @@ void KCPClient::Create(int conv)
 {
     if (kcp != nullptr) {
         ikcp_release(kcp);
-        delete kcp;
     }
 
     kcp = ikcp_create(conv, this);
@@ -88,80 +72,6 @@ void KCPClient::Create(int conv)
     ikcp_nodelay(kcp, 1, 10, 2, 1);
     //kcp->rx_minrto = 10;
     //kcp->fastresend = 1;
-}
-
-void KCPClient::Bind(Poco::Net::DatagramSocket* datagramSocket, const Poco::Net::SocketAddress& remote)
-{
-    this->socket = datagramSocket;
-    this->remote = remote;
-}
-
-int KCPClient::Receive(const char* buff, size_t len, std::vector<std::string>& msgs)
-{
-    if (socket == nullptr || kcp == nullptr) {
-        LogE("KCPClient.Receive():还没有初始化,不能接收!");
-        return -2;
-    }
-
-    //socket尝试接收
-    //Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
-    //int n = socket->receiveFrom(socketBuffer.data(), (int)socketBuffer.size(), remote);
-
-    if (len != -1) {
-        //LogD("KCPClient.Receive(): Socket接收到了数据,长度%d", len);
-
-        //尝试给kcp看看是否是它的信道的数据
-        int rece = ikcp_input(kcp, buff, len);
-        if (rece == -1) {
-            //conv不对应
-            return -1;
-        }
-        else {
-            ikcp_flush(kcp); //尝试暴力flush
-
-            while (rece >= 0) {
-                rece = ikcp_recv(kcp, kcpReceBuf.data(), kcpReceBuf.size());
-                if (rece > 0) {
-                    receData.push_back(std::string(kcpReceBuf.data(), rece)); //拷贝记录这一条收到的信息
-                }
-            }
-        }
-    }
-
-    msgs.clear();
-
-    msgs = receData;
-    receData.clear();
-
-    ikcp_update(kcp, iclock()); //需要定时调用.在调用接收或者发送之后调用好了
-    return (int)msgs.size();
-}
-
-int KCPClient::Send(const char* data, size_t len)
-{
-    if (socket == nullptr || kcp == nullptr) {
-        LogE("KCPClient.Send():还没有初始化,不能发送!");
-        return -1;
-    }
-
-    int res = ikcp_send(kcp, data, (int)len);
-    if (res < 0) {
-        LogE("KCPClient.Send():发送异常返回 res=%d", res);
-    }
-    ikcp_flush(kcp); //尝试暴力flush
-
-    ikcp_update(kcp, iclock());
-    return res;
-}
-
-// 查询等待发送的消息条数
-int KCPClient::WaitSendCount()
-{
-    if (socket == nullptr || kcp == nullptr) {
-        return 0;
-    }
-
-    return ikcp_waitsnd(kcp);
 }
 
 } // namespace dxlib

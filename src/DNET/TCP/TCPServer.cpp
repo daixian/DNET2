@@ -42,7 +42,7 @@ class TCPAcceptRunnable : public Poco::Runnable
             socket = new Poco::Net::ServerSocket(address);
             socket->setBlocking(false);
 
-            LogI("TCPServer.Start():TCPServer开始监听(%s:%d)...", address.host().toString().c_str(), address.port());
+            LogI("TCPAcceptRunnable.构造():TCPServer开始监听(%s:%d)...", address.host().toString().c_str(), address.port());
         }
         catch (const Poco::Exception& e) {
             LogE("TCPAcceptRunnable.构造():异常e=%s,%s", e.what(), e.message().c_str());
@@ -273,7 +273,7 @@ class TCPServer::Impl
             }
 
             //清理出错的客户端
-            if (itr->second->isError()) {
+            if (itr->second->isError() && itr->second->ErrorTimeUptoNow() > 100) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
                 eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
 
@@ -300,7 +300,7 @@ class TCPServer::Impl
             }
 
             //清理出错的客户端
-            if (itr->second->isError()) {
+            if (itr->second->isError() && itr->second->ErrorTimeUptoNow() > 100) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
                 eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
 
@@ -334,14 +334,18 @@ class TCPServer::Impl
         for (auto itr = clientManager.mClients.begin(); itr != clientManager.mClients.end();) {
             std::vector<std::string> clientMsgs;
             int res = itr->second->KCPReceive(clientMsgs);
-            //if (res == -1) {
-            //    continue;
-            //}
-            if (res > 0) {
-                msgs[itr->first] = clientMsgs;
+            if (res < 0) {
+                //-1或者未初始化等其他值是不匹配的信道
+                itr++;
+                continue;
             }
-
-            itr++;
+            else {
+                //==0或者大于0是匹配的信道,那么不需要再往下遍历了
+                if (res > 0) {
+                    msgs[itr->first] = clientMsgs;
+                }
+                break;
+            }
         }
         return (int)msgs.size();
     }

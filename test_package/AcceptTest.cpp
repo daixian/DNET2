@@ -8,6 +8,13 @@
 using namespace dxlib;
 using namespace std;
 
+TEST(stl, erase)
+{
+    map<int, int> m;
+
+    m.erase(1);
+}
+
 TEST(Accept, CreateAcceptString)
 {
     Accept accept;

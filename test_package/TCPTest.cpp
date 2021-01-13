@@ -98,9 +98,15 @@ TEST(TCPServer, OpenClose)
     TCPClient client;
     client.Connect("127.0.0.1", 8341);
 
-    while (server.RemoteCount() == 0) {
+    while (server.RemoteCount() == 0 || !server.GetRemotes().begin()->second->IsAccepted()) {
+        std::map<int, std::vector<std::vector<char>>> msgs; //无脑调用接收
+        server.Receive(msgs);
+
+        std::vector<std::string> cmsgs;
+        client.Receive(cmsgs); //无脑调用接收
         this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+    ASSERT_TRUE(target.onEventAcceptCount == 1);
 
     client.Close();
 
@@ -113,11 +119,12 @@ TEST(TCPServer, OpenClose)
                 LogI("服务器收到了客户端数据!");
             }
     }
-    ASSERT_TRUE(server.GetRemotes().empty());
 
-    //这里已经产生了远程关闭事件
-    ASSERT_TRUE(target.onEventAcceptCount == 1);
-    ASSERT_TRUE(target.OnEventRemoteCloseCount == 1);
+    //这个客户端应该会出错
+    ASSERT_TRUE(server.GetRemotes().begin()->second->isError());
+
+    //这里要100秒之后才实际关闭.已经产生了远程关闭事件
+    ASSERT_TRUE(target.OnEventRemoteCloseCount == 0);
 
     server.Close();
 }

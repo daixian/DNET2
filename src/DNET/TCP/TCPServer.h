@@ -145,6 +145,7 @@ class TCPServer
      * @author daixian
      * @date 2020/12/23
      *
+     * @param  tcpID     tcpID.
      * @param  waitCount (Optional) 等待的次数,一次100ms吧.
      *
      * @returns 等于Available()函数的返回值.
@@ -157,7 +158,7 @@ class TCPServer
      * @author daixian
      * @date 2021/1/11
      *
-     * @param  tcpID     Identifier for the TCP.
+     * @param  tcpID     tcpID.
      * @param  waitCount (Optional) Number of waits.
      *
      * @returns An int.

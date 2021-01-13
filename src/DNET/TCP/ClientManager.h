@@ -11,6 +11,13 @@
 
 namespace dxlib {
 
+/**
+ * 它是一个Tcp Server的所有客户端对象管理.因为所有的这些客户端公用一个KCP的UDP端口.
+ * 所以它里面还有一个kcp使用的udpSocket.
+ *
+ * @author daixian
+ * @date 2021/1/13
+ */
 class ClientManager
 {
   public:
@@ -54,9 +61,9 @@ class ClientManager
      * @author daixian
      * @date 2020/12/21
      *
-     * @param  tcpID Identifier for the TCP.
+     * @param  tcpID TCP的id.
      *
-     * @returns Null if it fails, else the client.
+     * @returns 找不到返回null.
      */
     TCPClient* GetClient(int tcpID)
     {
@@ -73,24 +80,34 @@ class ClientManager
      * @date 2020/12/21
      *
      * @param  tcpID Identifier for the TCP.
-     *
-     * @returns Null if it fails, else the client.
      */
     void RemoveClient(int tcpID)
     {
         if (mClients.find(tcpID) != mClients.end()) {
-            delete mClients[tcpID];
+            TCPClient* ptr = mClients[tcpID];
+            for (auto itr = mAcceptClients.begin(); itr != mAcceptClients.end();) {
+                if (itr->second == ptr) {
+                    itr = mAcceptClients.erase(itr);
+                }
+                else {
+                    itr++;
+                }
+            }
             mClients.erase(tcpID);
+            delete ptr;
         }
     }
 
     /**
-     * 服务器端的客户端在accept的时候会调用这个函数.
+     * 服务器端的temp客户端在accept的时候会调用这个函数.
      *
      * @author daixian
      * @date 2021/1/9
      *
-     * @param  uuid The uuid.
+     * @param  uuid      这个客户端的uuid.
+     * @param  tempTcpID 当前的临时tcpID.
+     *
+     * @returns An int.
      */
     int RegisterClientWithUUID(const std::string& uuid, int tempTcpID)
     {
@@ -100,7 +117,7 @@ class ClientManager
             TCPClient* oldclient = mAcceptClients[uuid];
             int tcpID = oldclient->TcpID();
 
-            client->MoveKCPClient(oldclient); //移动也就是继承kcp部分
+            client->CopyKCPClient(oldclient); //复制也就是继承kcp部分
 
             mAcceptClients[uuid] = client;
 
@@ -182,6 +199,7 @@ class ClientManager
         mClients.clear();
         _clientCount = 1;
 
+        //原则上mClients的项应该包含了所有的mAcceptClients里的项,这里就不去再检查了.
         mAcceptClients.clear();
     }
 
@@ -196,7 +214,12 @@ class ClientManager
     // 当前接收长度
     int receLen = 0;
 
-    // KCP的接收
+    /**
+     * Kcp使用的UPD的socket接收.
+     *
+     * @author daixian
+     * @date 2021/1/13
+     */
     void KCPSocketReceive()
     {
         try { //socket尝试接收
@@ -204,10 +227,10 @@ class ClientManager
             receLen = acceptUDPSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
         }
         catch (const Poco::Exception& e) {
-            LogE("TCPClient.InitUDPSocket():异常e=%s,%s", e.what(), e.message().c_str());
+            LogE("ClientManager.KCPSocketReceive():异常e=%s,%s", e.what(), e.message().c_str());
         }
         catch (const std::exception& e) {
-            LogE("TCPClient.InitUDPSocket():异常e=%s", e.what());
+            LogE("ClientManager.KCPSocketReceive():异常e=%s", e.what());
         }
     }
 

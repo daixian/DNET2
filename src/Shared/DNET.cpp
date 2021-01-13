@@ -1,10 +1,13 @@
 ﻿#include "DNET.h"
 
-//所有创建出来的服务器
-std::vector<dxlib::KCPServer*> vServer;
-std::vector<dxlib::KCPClient*> vClient;
+#define DLOG_DLL_EXPORTS
+#include "dlog/dlog.h"
 
-dxlib::KCPServer* findServer(dxlib::KCPServer* ptr)
+//所有创建出来的服务器
+std::vector<dxlib::TCPServer*> vServer;
+std::vector<dxlib::TCPClient*> vClient;
+
+dxlib::TCPServer* findServer(dxlib::TCPServer* ptr)
 {
     for (size_t i = 0; i < vServer.size(); i++) {
         if (vServer[i] == ptr) {
@@ -14,7 +17,7 @@ dxlib::KCPServer* findServer(dxlib::KCPServer* ptr)
     return nullptr;
 }
 
-void deleteServer(dxlib::KCPServer* ptr)
+void deleteServer(dxlib::TCPServer* ptr)
 {
     for (auto itr = vServer.begin(); itr != vServer.end();) {
         if (*itr == ptr) {
@@ -26,7 +29,7 @@ void deleteServer(dxlib::KCPServer* ptr)
     }
 }
 
-dxlib::KCPClient* findClient(dxlib::KCPClient* ptr)
+dxlib::TCPClient* findClient(dxlib::TCPClient* ptr)
 {
     for (size_t i = 0; i < vClient.size(); i++) {
         if (vClient[i] == ptr) {
@@ -36,7 +39,7 @@ dxlib::KCPClient* findClient(dxlib::KCPClient* ptr)
     return nullptr;
 }
 
-void deleteClient(dxlib::KCPClient* ptr)
+void deleteClient(dxlib::TCPClient* ptr)
 {
     for (auto itr = vClient.begin(); itr != vClient.end();) {
         if (*itr == ptr) {
@@ -48,6 +51,12 @@ void deleteClient(dxlib::KCPClient* ptr)
     }
 }
 
+DNET_EXPORT DNetError __cdecl dnLogInit(const char* appName)
+{
+    dlog_init("log", appName, dlog_init_relative::APPDATA);
+    return DNetError::Ok;
+}
+
 /**
  * u3d设置一个字符串消息的回调函数进来.
  *
@@ -57,7 +66,7 @@ void deleteClient(dxlib::KCPClient* ptr)
  * @param [in] server 绑定的服务器.
  * @param      proc   u3d传过来的回调函数指针.
  */
-DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dxlib::KCPServer* server, MessageProcCallback proc)
+DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dxlib::TCPServer* server, MessageProcCallback proc)
 {
     server->user = proc;
     return DNetError::Ok;
@@ -76,10 +85,10 @@ DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dxlib::KCPServer* server, M
  *
  * @returns 成功返回0.
  */
-DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host, int port, dxlib::KCPServer*& server)
+DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host, int port, dxlib::TCPServer*& server)
 {
     try {
-        server = new dxlib::KCPServer(name, host, port);
+        server = new dxlib::TCPServer(name, host, port);
 
         vServer.push_back(server); //记录这个服务器
         return DNetError::Ok;
@@ -101,9 +110,9 @@ DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host,
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerStart(dxlib::KCPServer* server)
+DNET_EXPORT DNetError __cdecl dnServerStart(dxlib::TCPServer* server)
 {
-    dxlib::KCPServer* ptr = findServer(server);
+    dxlib::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
@@ -127,9 +136,9 @@ DNET_EXPORT DNetError __cdecl dnServerStart(dxlib::KCPServer* server)
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerClose(dxlib::KCPServer* server)
+DNET_EXPORT DNetError __cdecl dnServerClose(dxlib::TCPServer* server)
 {
-    dxlib::KCPServer* ptr = findServer(server);
+    dxlib::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
@@ -154,9 +163,9 @@ DNET_EXPORT DNetError __cdecl dnServerClose(dxlib::KCPServer* server)
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::KCPServer* server)
+DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::TCPServer* server)
 {
-    dxlib::KCPServer* ptr = findServer(server);
+    dxlib::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
@@ -196,7 +205,7 @@ DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::KCPServer* server)
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::KCPServer* server, int id, const char* msg, int len)
+DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::TCPServer* server, int id, const char* msg, int len)
 {
     int res = server->Send(id, msg, len);
     if (res > 0) {
@@ -216,7 +225,7 @@ DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::KCPServer* server, int id, con
  * @param [in] client 绑定的客户端.
  * @param       proc   u3d传过来的回调函数指针.
  */
-DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dxlib::KCPClient* client, MessageProcCallback proc)
+DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dxlib::TCPClient* client, MessageProcCallback proc)
 {
     client->user = proc;
     return DNetError::Ok;
@@ -233,10 +242,10 @@ DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dxlib::KCPClient* client, M
  *
  * @returns 成功返回0.
  */
-DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dxlib::KCPClient*& client)
+DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dxlib::TCPClient*& client)
 {
     try {
-        client = new dxlib::KCPClient(name);
+        client = new dxlib::TCPClient(name);
 
         vClient.push_back(client); //记录这个服务器
         return DNetError::Ok;
@@ -258,9 +267,9 @@ DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dxlib::KCPClient*& clie
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientConnect(dxlib::KCPClient* client, char* host, int port)
+DNET_EXPORT DNetError __cdecl dnClientConnect(dxlib::TCPClient* client, char* host, int port)
 {
-    dxlib::KCPClient* ptr = findClient(client);
+    dxlib::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
@@ -284,9 +293,9 @@ DNET_EXPORT DNetError __cdecl dnClientConnect(dxlib::KCPClient* client, char* ho
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientClose(dxlib::KCPClient* client)
+DNET_EXPORT DNetError __cdecl dnClientClose(dxlib::TCPClient* client)
 {
-    dxlib::KCPClient* ptr = findClient(client);
+    dxlib::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
@@ -312,9 +321,9 @@ DNET_EXPORT DNetError __cdecl dnClientClose(dxlib::KCPClient* client)
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientUpdate(dxlib::KCPClient* client)
+DNET_EXPORT DNetError __cdecl dnClientUpdate(dxlib::TCPClient* client)
 {
-    dxlib::KCPClient* ptr = findClient(client);
+    dxlib::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
@@ -351,7 +360,7 @@ DNET_EXPORT DNetError __cdecl dnClientUpdate(dxlib::KCPClient* client)
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientSend(dxlib::KCPClient* client, const char* msg, int len)
+DNET_EXPORT DNetError __cdecl dnClientSend(dxlib::TCPClient* client, const char* msg, int len)
 {
     int res = client->Send(msg, len);
     if (res > 0) {

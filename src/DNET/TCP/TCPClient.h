@@ -30,21 +30,21 @@ class TCPClient
     void* user = nullptr;
 
     /**
-     * 服务器创建一个客户端.
+     * 服务器创建一个客户端(由TCPServer来调用创建).
      *
      * @author daixian
      * @date 2020/12/23
      *
-     * @param          tcpID         Identifier for the TCP.
-     * @param [in,out] socket        If non-null, the socket.
-     * @param [in,out] clientManager If non-null, manager for client.
-     * @param [in,out] obj           The object.
+     * @param       tcpID         tcpID.
+     * @param [in]  socket        Accept线程产生的tcp socket.
+     * @param [in]  clientManager 传递给这个TCPClient对象的一个clientManager数据指针.
+     * @param [out] obj           返回的这个obj.
      */
     static void CreateWithServer(int tcpID, void* socket, void* clientManager,
                                  TCPClient& obj);
 
     /**
-     * 如果有就是它的tcpID,没有则是-1
+     * 如果有就是它的tcpID,没有则是-1.
      *
      * @author daixian
      * @date 2020/12/22
@@ -54,12 +54,12 @@ class TCPClient
     int TcpID();
 
     /**
-     * Sets TCP identifier
+     * 设置TCP id.
      *
      * @author daixian
      * @date 2021/1/9
      *
-     * @param  tcpID Identifier for the TCP.
+     * @param  tcpID tcpID.
      */
     void SetTcpID(int tcpID);
 
@@ -69,12 +69,12 @@ class TCPClient
      * @author daixian
      * @date 2020/12/23
      *
-     * @returns A std::string.
+     * @returns UUID的字符串.
      */
     std::string UUID();
 
     /**
-     * 设置它的UUID.
+     * 设置它的UUID(通常不应该随便改变它).
      *
      * @author daixian
      * @date 2020/12/23
@@ -142,6 +142,16 @@ class TCPClient
      * @returns True if error, false if not.
      */
     bool isError();
+
+    /**
+     * 错误时间距离现在多久了,单位秒.
+     *
+     * @author daixian
+     * @date 2021/1/13
+     *
+     * @returns A float.
+     */
+    float ErrorTimeUptoNow();
 
     /**
      * 连接主机.
@@ -243,7 +253,7 @@ class TCPClient
      *
      * @param [in] src 移动源,老的对象,移动给自己.
      */
-    void MoveKCPClient(TCPClient* src);
+    void CopyKCPClient(TCPClient* src);
 
     /**
      * 走kcp通道进行发送.
@@ -275,8 +285,6 @@ class TCPClient
      *
      * @author daixian
      * @date 2020/12/20
-     *
-     * @param  conv The convert.
      *
      * @returns An int.
      */

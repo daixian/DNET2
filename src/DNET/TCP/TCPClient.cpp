@@ -39,6 +39,9 @@ class TCPClient::Impl
     {
         //析构的时候尝试关闭
         Close();
+
+        delete acceptData;
+        acceptData = nullptr;
     }
 
     // 名字.
@@ -56,7 +59,7 @@ class TCPClient::Impl
     // 客户端的socket
     Poco::Net::StreamSocket socket;
 
-    // 客户端的udp的socket,如果自己是客户端的时候使用它来管理.如果是server里的那么使用clientManager里的.
+    // 客户端的udp的socket,如果自己是客户端的时候使用本地的成员来管理.如果是server里的那么使用clientManager里的.
     Poco::Net::DatagramSocket* udpSocket = nullptr;
 
     // TCP通信协议
@@ -76,6 +79,9 @@ class TCPClient::Impl
 
     // 是否已经网络错误了
     bool isError = false;
+
+    // 网络错误的计时
+    clock_t errorTime;
 
     // 所有接受到的消息的总条数
     int receMsgCount = 0;
@@ -187,16 +193,14 @@ class TCPClient::Impl
             if (udpSocket != nullptr) {
                 try {
                     udpSocket->close();
-                    delete udpSocket;
-                    udpSocket = nullptr;
                 }
                 catch (const std::exception&) {
                 }
+                delete udpSocket;
+                udpSocket = nullptr;
             }
 
             isConnected = false;
-            delete acceptData;
-            acceptData = nullptr;
 
             eventClose.notify(this, TCPEventClose());
         }
@@ -240,7 +244,6 @@ class TCPClient::Impl
     int SendAccept()
     {
         if (acceptData != nullptr) {
-            LogW("TCPClient.SendAccept():当前存在Accept未完成的状态,这是一次强制重发.");
             delete acceptData;
         }
 
@@ -275,7 +278,6 @@ class TCPClient::Impl
     {
         //遍历所有收到的消息
         for (size_t msgIndex = 0; msgIndex < msgs.size();) {
-
             if (types[msgIndex] == 0) {
                 //命令消息:0号命令
                 std::string& acceptStr = std::string(msgs[msgIndex].data(), msgs[msgIndex].size());
@@ -402,7 +404,10 @@ class TCPClient::Impl
         if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
             LogE("TCPClient.Receive():poll到了异常!");
             isError = true;
+            errorTime = clock();
             eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
+            //Close();
+            //return -1; //网络出错那么就不接收算了
         }
 
         while (true) {
@@ -444,8 +449,10 @@ class TCPClient::Impl
         if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
             LogE("TCPClient.Receive():poll到了异常!");
             isError = true;
+            errorTime = clock();
             eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
-            return -1; //网络出错那么就不接收算了
+            //Close();
+            //return -1; //网络出错那么就不接收算了
         }
 
         while (true) {
@@ -467,6 +474,7 @@ class TCPClient::Impl
     int KCPReceive(std::vector<std::string>& msgs)
     {
         if (udpSocket != nullptr) {
+            //这是本地的client
             try {
                 //socket尝试接收
                 Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
@@ -481,10 +489,12 @@ class TCPClient::Impl
             }
         }
         else {
+            //这是server中的client
             if (clientManager == nullptr) {
                 LogE("TCPClient.KCPReceive():clientManager==null");
                 return -1;
             }
+            //实际上此时如果是TCPServer那么已经由TCPServer的函数中调用了一次Socket接收,所以这里直接送数据.
             return kcpClient->Receive(clientManager->receBuffUDP.data(), clientManager->receLen, msgs);
         }
     }
@@ -579,6 +589,11 @@ bool TCPClient::isError()
     return _impl->isError;
 }
 
+float TCPClient::ErrorTimeUptoNow()
+{
+    return (float)(clock() - _impl->errorTime) / CLOCKS_PER_SEC;
+}
+
 int TCPClient::Connect(const std::string& host, int port)
 {
     return _impl->Connect(host, port);
@@ -649,7 +664,7 @@ void* TCPClient::GetKCPClient()
     return _impl->kcpClient.get();
 }
 
-void TCPClient::MoveKCPClient(TCPClient* src)
+void TCPClient::CopyKCPClient(TCPClient* src)
 {
     _impl->kcpClient = src->_impl->kcpClient;
 }
