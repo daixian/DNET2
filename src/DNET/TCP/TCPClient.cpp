@@ -198,6 +198,9 @@ class TCPClient::Impl
                 }
                 delete udpSocket;
                 udpSocket = nullptr;
+                if (kcpClient != nullptr) {
+                    kcpClient->socket = nullptr;
+                }
             }
 
             isConnected = false;
@@ -406,8 +409,8 @@ class TCPClient::Impl
             isError = true;
             errorTime = clock();
             eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
-            //Close();
-            //return -1; //网络出错那么就不接收算了
+            Close();
+            return -1; //Close之后socket没了,不能往下执行了
         }
 
         while (true) {
@@ -451,8 +454,8 @@ class TCPClient::Impl
             isError = true;
             errorTime = clock();
             eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
-            //Close();
-            //return -1; //网络出错那么就不接收算了
+            Close();
+            return -1; //网络出错那么就不接收算了
         }
 
         while (true) {
@@ -473,6 +476,10 @@ class TCPClient::Impl
 
     int KCPReceive(std::vector<std::string>& msgs)
     {
+        if (!isConnected) {
+            return -1;
+        }
+
         if (udpSocket != nullptr) {
             //这是本地的client
             try {
@@ -520,8 +527,6 @@ void TCPClient::CreateWithServer(int tcpID, void* socket, void* clientManager,
     obj._impl->clientManager = (ClientManager*)clientManager;
     obj._impl->socket = *(Poco::Net::StreamSocket*)socket; //拷贝一次
 
-    obj._impl->isConnected = true;
-
     //setopt timeout
     Timespan timeout3(5000000);
     obj._impl->socket.setReceiveTimeout(timeout3); //retn void
@@ -534,6 +539,8 @@ void TCPClient::CreateWithServer(int tcpID, void* socket, void* clientManager,
 
     obj._impl->socket.setNoDelay(true);
     obj._impl->socket.setBlocking(false);
+
+    obj._impl->isConnected = true;
     return;
 }
 

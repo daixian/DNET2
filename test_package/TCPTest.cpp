@@ -99,12 +99,12 @@ TEST(TCPServer, OpenClose)
     client.Connect("127.0.0.1", 8341);
 
     while (server.RemoteCount() == 0 || !server.GetRemotes().begin()->second->IsAccepted()) {
+        this_thread::sleep_for(std::chrono::milliseconds(10));
         std::map<int, std::vector<std::vector<char>>> msgs; //无脑调用接收
         server.Receive(msgs);
 
         std::vector<std::string> cmsgs;
         client.Receive(cmsgs); //无脑调用接收
-        this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     ASSERT_TRUE(target.onEventAcceptCount == 1);
 
@@ -137,8 +137,6 @@ TEST(TCPServer, sendBytes)
 
     TCPClient client;
     client.Connect("127.0.0.1", 8341);
-
-    //this_thread::sleep_for(std::chrono::seconds(1));
 
     std::string msg = "1234567890";
     int res = client.Send(msg.c_str(), msg.size());
@@ -181,8 +179,6 @@ TEST(TCPServer, sendBytes_localhost)
 
     TCPClient client;
     client.Connect("localhost", 8341);
-
-    //this_thread::sleep_for(std::chrono::seconds(1));
 
     std::string msg = "1234567890";
     int res = client.Send(msg.c_str(), msg.size());
@@ -263,6 +259,9 @@ TEST(TCPServer, sendText_128Client)
     clients.resize(128);
     for (size_t i = 0; i < clients.size(); i++) {
         clients[i].Connect("127.0.0.1", 8341);
+
+        std::map<int, std::vector<std::string>> msgs;
+        server.Receive(msgs); //无脑调用接收
     }
 
     //等待所有客户端连接完成
@@ -329,7 +328,7 @@ TEST(TCPServer, sendText2)
     TCPServer server("server", "127.0.0.1", 8341);
     server.Start();
     while (!server.IsStarted()) {
-        this_thread::sleep_for(std::chrono::milliseconds(100));
+        this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     TCPClient client;

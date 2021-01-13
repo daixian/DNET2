@@ -9,6 +9,8 @@
 #include "Poco/Net/DatagramSocket.h"
 #include "dlog/dlog.h"
 
+#include <mutex>
+
 namespace dxlib {
 
 /**
@@ -35,6 +37,9 @@ class ClientManager
 
     // 用户连接成功的事件.
     Poco::BasicEvent<TCPEventAccept>* eventAccept = nullptr;
+
+    // 锁,ClientManager类中和TCPServer类中使用
+    //std::mutex mut;
 
     /**
      * 服务器添加一个客户端进来记录.
