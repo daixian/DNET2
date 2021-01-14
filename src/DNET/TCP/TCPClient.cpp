@@ -33,6 +33,9 @@ class TCPClient::Impl
         uuid = uuidGen.createRandom().toString();
 
         kcpClient = std::shared_ptr<KCPClient>(new KCPClient());
+
+        lastTcpReceTime = clock();
+        lastKcpReceTime = clock();
     }
 
     ~Impl()
@@ -80,8 +83,14 @@ class TCPClient::Impl
     // 是否已经网络错误了
     bool isError = false;
 
-    // 网络错误的计时
+    // 网络错误的发生时间
     clock_t errorTime;
+
+    // 上一次的TCP消息接收时间
+    clock_t lastTcpReceTime;
+
+    // 上一次的KCP消息接收时间
+    clock_t lastKcpReceTime;
 
     // 所有接受到的消息的总条数
     int receMsgCount = 0;
@@ -255,6 +264,7 @@ class TCPClient::Impl
         return Send(acceptStr.c_str(), acceptStr.size(), 0);
     }
 
+    // 使用所有接受到的消息然后过滤其中的CMD消息执行,擦除CMD消息
     int ProcCMD(std::vector<std::string>& msgs, std::vector<int>& types)
     {
         //遍历所有收到的消息
@@ -262,7 +272,7 @@ class TCPClient::Impl
             if (types[msgIndex] == 0) {
                 //命令消息:0号命令
                 std::string& acceptStr = msgs[msgIndex];
-                ProcAccept(acceptStr);
+                ProcCMDAccept(acceptStr);
 
                 // 移除这个命令消息
                 msgs.erase(msgs.begin() + msgIndex);
@@ -276,7 +286,7 @@ class TCPClient::Impl
         return (int)msgs.size();
     }
 
-    // 使用所有接受到的消息然后过滤其中的CMD消息
+    // 使用所有接受到的消息然后过滤其中的CMD消息执行,擦除CMD消息
     int ProcCMD(std::vector<std::vector<char>>& msgs, std::vector<int>& types)
     {
         //遍历所有收到的消息
@@ -284,7 +294,7 @@ class TCPClient::Impl
             if (types[msgIndex] == 0) {
                 //命令消息:0号命令
                 std::string& acceptStr = std::string(msgs[msgIndex].data(), msgs[msgIndex].size());
-                ProcAccept(acceptStr);
+                ProcCMDAccept(acceptStr);
 
                 // 移除这个命令消息
                 msgs.erase(msgs.begin() + msgIndex);
@@ -298,8 +308,8 @@ class TCPClient::Impl
         return (int)msgs.size();
     }
 
-    // 处理accept字符串
-    void ProcAccept(std::string& acceptStr)
+    // 处理accept字符串消息
+    void ProcCMDAccept(std::string& acceptStr)
     {
         if (IsInServer()) {
             //自己是服务器端
@@ -387,15 +397,14 @@ class TCPClient::Impl
     /**
      * Receives the given msgs
      *
-     * @author daixian
-     * @date 2020/12/22
-     *
+     * @tparam T 一条消息的类型为std::string或者std::vector<char>.
      * @param [out] msgs  The msgs.
      * @param [out] types 消息的类型.
      *
      * @returns 接收到的数据条数.
      */
-    int Receive(std::vector<std::vector<char>>& msgs, std::vector<int>& types)
+    template <typename T>
+    int Receive(std::vector<T>& msgs, std::vector<int>& types)
     {
         msgs.clear();
         types.clear();
@@ -404,71 +413,36 @@ class TCPClient::Impl
             return -1;
         }
 
+        // 在这里检察一下心跳
+        CheckHeartbeat();
+
         if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
             LogE("TCPClient.Receive():poll到了异常!");
-            isError = true;
-            errorTime = clock();
-            eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
-            Close();
+            OnError();
             return -1; //Close之后socket没了,不能往下执行了
         }
-
-        while (true) {
-            if (socket.available() > 0) {
-                int res = socket.receiveBytes(receBuff.data(), (int)receBuff.size());
-                if (res <= 0) {
-                    break;
+        try {
+            while (true) {
+                if (socket.available() > 0) {
+                    int res = socket.receiveBytes(receBuff.data(), (int)receBuff.size());
+                    if (res <= 0) {
+                        break;
+                    }
+                    receMsgCount += packet.Unpack(receBuff.data(), res, msgs, types);
+                    lastTcpReceTime = clock();
                 }
-                receMsgCount += packet.Unpack(receBuff.data(), res, msgs, types);
-            }
-            else {
-                break;
-            }
-        }
-
-        return (int)msgs.size();
-    }
-
-    /**
-     * Receives the given msgs
-     *
-     * @author daixian
-     * @date 2020/12/22
-     *
-     * @param [out] msgs  The msgs.
-     * @param [out] types 消息的类型.
-     *
-     * @returns 接收到的数据条数.
-     */
-    int Receive(std::vector<std::string>& msgs, std::vector<int>& types)
-    {
-        msgs.clear();
-        types.clear();
-
-        if (!isConnected) {
-            return -1;
-        }
-
-        if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
-            LogE("TCPClient.Receive():poll到了异常!");
-            isError = true;
-            errorTime = clock();
-            eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
-            Close();
-            return -1; //网络出错那么就不接收算了
-        }
-
-        while (true) {
-            if (socket.available() > 0) {
-                int res = socket.receiveBytes(receBuff.data(), (int)receBuff.size());
-                packet.Unpack(receBuff.data(), res, msgs, types);
-                if (res <= 0) {
+                else {
                     break;
                 }
             }
-            else {
-                break;
-            }
+        }
+        catch (const Poco::Exception& e) {
+            LogE("TCPClient.Receive():异常e=%s,%s", e.what(), e.message().c_str());
+            OnError();
+        }
+        catch (const std::exception& e) {
+            LogE("TCPClient.Receive():异常e=%s", e.what());
+            OnError();
         }
 
         return (int)msgs.size();
@@ -486,7 +460,11 @@ class TCPClient::Impl
                 //socket尝试接收
                 Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
                 int n = udpSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
-                return kcpClient->Receive(receBuffUDP.data(), n, msgs);
+                int res = kcpClient->Receive(receBuffUDP.data(), n, msgs);
+                if (res > 0) {
+                    lastKcpReceTime = clock();
+                }
+                return res;
             }
             catch (const Poco::Exception& e) {
                 LogE("TCPClient.KCPReceive():异常e=%s,%s", e.what(), e.message().c_str());
@@ -494,6 +472,8 @@ class TCPClient::Impl
             catch (const std::exception& e) {
                 LogE("TCPClient.KCPReceive():异常e=%s", e.what());
             }
+            //执行到这里说明接收错误了
+            OnError();
         }
         else {
             //LogE("TCPClient.KCPReceive():本地udpSocket=null");
@@ -504,7 +484,48 @@ class TCPClient::Impl
     int KCPReceive(const char* data, size_t len, std::vector<std::string>& msgs)
     {
         //实际上此时如果是TCPServer那么已经由TCPServer的函数中调用了一次Socket接收,所以这里直接送数据.
-        return kcpClient->Receive(data, len, msgs);
+        int res = kcpClient->Receive(data, len, msgs);
+        if (res > 0) {
+            lastKcpReceTime = clock();
+        }
+        return res;
+    }
+
+    // 发生错误之后执行这个
+    void OnError()
+    {
+        isError = true;
+        errorTime = clock();
+        eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
+        Close();
+    }
+
+    // 上次发生错误到现在的时间
+    float TimeFormErrorToNow()
+    {
+        return (float)(clock() - errorTime) / CLOCKS_PER_SEC;
+    }
+
+    // 上次接收到TCP消息的时间
+    float TimeFormTCPReceToNow()
+    {
+        return (float)(clock() - lastTcpReceTime) / CLOCKS_PER_SEC;
+    }
+
+    // 上次接收到KCP消息的时间
+    float TimeFormKCPRecetoNow()
+    {
+        return (float)(clock() - lastKcpReceTime) / CLOCKS_PER_SEC;
+    }
+
+    // 检察心跳来看看是否已经长时间没有收到消息了
+    void CheckHeartbeat()
+    {
+        if (TimeFormTCPReceToNow() > 600 &&
+            TimeFormKCPRecetoNow() > 600) {
+            LogE("TCPClient.CheckHeartbeat():tcpID=%d的客户端长时间未收到消息...", tcpID);
+            OnError();
+        }
     }
 };
 
@@ -597,9 +618,9 @@ bool TCPClient::isError()
     return _impl->isError;
 }
 
-float TCPClient::ErrorTimeUptoNow()
+float TCPClient::TimeFormErrorToNow()
 {
-    return (float)(clock() - _impl->errorTime) / CLOCKS_PER_SEC;
+    return _impl->TimeFormErrorToNow();
 }
 
 int TCPClient::Connect(const std::string& host, int port)

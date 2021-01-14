@@ -151,7 +151,7 @@ class TCPClient
      *
      * @returns A float.
      */
-    float ErrorTimeUptoNow();
+    float TimeFormErrorToNow();
 
     /**
      * 连接主机.

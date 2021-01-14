@@ -203,7 +203,8 @@ class TCPServer::Impl
         }
     }
 
-    int Receive(std::map<int, std::vector<std::vector<char>>>& msgs)
+    template <typename T>
+    int Receive(std::map<int, std::vector<T>>& msgs)
     {
         // 执行tcp socket的accept
         SocketAccept();
@@ -211,43 +212,13 @@ class TCPServer::Impl
         msgs.clear();
 
         for (auto itr = clientManager.mClients.begin(); itr != clientManager.mClients.end();) {
-            std::vector<std::vector<char>> clientMsgs;
+            std::vector<T> clientMsgs;
             if (itr->second->Receive(clientMsgs) > 0) {
                 msgs[itr->first] = clientMsgs;
             }
 
             //清理出错的客户端
-            if (itr->second->isError() && itr->second->ErrorTimeUptoNow() > 100) {
-                LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
-                eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
-
-                clientManager.mAcceptClients.erase(itr->second->AcceptData()->uuidC);
-                delete itr->second;
-                itr = clientManager.mClients.erase(itr);
-            }
-            else {
-                itr++;
-            }
-        }
-
-        return (int)msgs.size();
-    }
-
-    int Receive(std::map<int, std::vector<std::string>>& msgs)
-    {
-        // 执行tcp socket的accept
-        SocketAccept();
-
-        msgs.clear();
-
-        for (auto itr = clientManager.mClients.begin(); itr != clientManager.mClients.end();) {
-            std::vector<std::string> clientMsgs;
-            if (itr->second->Receive(clientMsgs) > 0) {
-                msgs[itr->first] = clientMsgs;
-            }
-
-            //清理出错的客户端
-            if (itr->second->isError() && itr->second->ErrorTimeUptoNow() > 100) {
+            if (itr->second->isError() && itr->second->TimeFormErrorToNow() > 100) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
                 eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
 

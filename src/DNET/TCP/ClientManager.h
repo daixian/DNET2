@@ -198,6 +198,8 @@ class ClientManager
      */
     void Clear()
     {
+        acceptUDPSocket = nullptr;
+
         for (auto& kvp : mClients) {
             delete kvp.second;
         }
