@@ -148,7 +148,7 @@ class TCPClient::Impl
             socket.connect(sa); //这个是阻塞的连接
         }
         catch (Poco::Net::ConnectionRefusedException& e) {
-            LogE("TCPClient.Connect():连接拒绝!");
+            LogE("TCPClient.Connect():连接拒绝! %s,%s", e.what(), e.message().c_str());
             return -1;
         }
         catch (Poco::Net::NetException& e) {
@@ -477,8 +477,9 @@ class TCPClient::Impl
         }
         else {
             //LogE("TCPClient.KCPReceive():本地udpSocket=null");
-            return -1;
         }
+
+        return -1;
     }
 
     int KCPReceive(const char* data, size_t len, std::vector<std::string>& msgs)

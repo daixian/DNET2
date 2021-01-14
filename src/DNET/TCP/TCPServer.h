@@ -4,11 +4,11 @@
 #include <vector>
 #include <map>
 
-#include "Poco/BasicEvent.h"
-#include "Poco/Delegate.h"
-
 #include "TCPEvent.h"
 #include "TCPClient.h"
+
+#include "Poco/BasicEvent.h"
+#include "Poco/Delegate.h"
 
 namespace dxlib {
 

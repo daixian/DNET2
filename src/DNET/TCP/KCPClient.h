@@ -4,10 +4,10 @@
 #include <vector>
 #include <map>
 
+#include "Accept.h"
+
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/DatagramSocket.h"
-
-#include "Accept.h"
 
 #include "../kcp/ikcp.h"
 #include "../kcp/clock.hpp"
@@ -114,7 +114,7 @@ class KCPClient
             //LogD("KCPClient.Receive(): Socket接收到了数据,长度%d", len);
 
             //尝试给kcp看看是否是它的信道的数据
-            int rece = ikcp_input(kcp, buff, len);
+            int rece = ikcp_input(kcp, buff, (long)len);
             if (rece != 0) {
                 //conv不对应或者其它错误
                 return -1;
@@ -123,7 +123,7 @@ class KCPClient
                 ikcp_flush(kcp); //尝试暴力flush
 
                 while (rece >= 0) {
-                    rece = ikcp_recv(kcp, kcpReceBuf.data(), kcpReceBuf.size());
+                    rece = ikcp_recv(kcp, kcpReceBuf.data(), (int)kcpReceBuf.size());
                     if (rece > 0) {
                         receData.push_back(std::string(kcpReceBuf.data(), rece)); //拷贝记录这一条收到的信息
                     }

@@ -5,11 +5,11 @@
 #include <map>
 #include <memory>
 
-#include "Poco/BasicEvent.h"
-#include "Poco/Delegate.h"
-
 #include "TCPEvent.h"
 #include "Accept.h"
+
+#include "Poco/BasicEvent.h"
+#include "Poco/Delegate.h"
 
 namespace dxlib {
 
