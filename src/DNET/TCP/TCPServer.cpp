@@ -52,6 +52,9 @@ class TCPServer::Impl
     // kcp使用的UPD的Socket
     Poco::Net::DatagramSocket* acceptUDPSocket = nullptr;
 
+    // 接收用的buffer
+    std::vector<char> receBuffUDP;
+
     // 用户连接进来了并且完成了握手协议的事件.
     Poco::BasicEvent<TCPEventAccept> eventAccept;
 
@@ -79,6 +82,7 @@ class TCPServer::Impl
 
             acceptUDPSocket = new Poco::Net::DatagramSocket(sAddr);
             acceptUDPSocket->setBlocking(false);
+            receBuffUDP.resize(8 * 1024);
 
             clientManager.acceptUDPSocket = acceptUDPSocket;
         }
@@ -201,6 +205,7 @@ class TCPServer::Impl
 
     int Receive(std::map<int, std::vector<std::vector<char>>>& msgs)
     {
+        // 执行tcp socket的accept
         SocketAccept();
 
         msgs.clear();
@@ -230,6 +235,7 @@ class TCPServer::Impl
 
     int Receive(std::map<int, std::vector<std::string>>& msgs)
     {
+        // 执行tcp socket的accept
         SocketAccept();
 
         msgs.clear();
@@ -269,13 +275,28 @@ class TCPServer::Impl
 
     int KCPReceive(std::map<int, std::vector<std::string>>& msgs)
     {
+        if (acceptUDPSocket == nullptr) {
+            return -1;
+        }
         msgs.clear();
 
-        clientManager.KCPSocketReceive();
+        // 当前接收长度
+        int receLen = 0;
+
+        try { //socket尝试接收
+            Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
+            receLen = acceptUDPSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
+        }
+        catch (const Poco::Exception& e) {
+            LogE("TCPServer.KCPReceive():异常e=%s,%s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("TCPServer.KCPReceive():异常e=%s", e.what());
+        }
 
         for (auto itr = clientManager.mAcceptClients.begin(); itr != clientManager.mAcceptClients.end();) {
             std::vector<std::string> clientMsgs;
-            int res = itr->second->KCPReceive(clientMsgs);
+            int res = itr->second->KCPReceive(receBuffUDP.data(), receLen, clientMsgs);
             if (res < 0) {
                 //-1或者未初始化等其他值是不匹配的信道
                 itr++;

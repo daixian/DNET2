@@ -269,7 +269,7 @@ class TCPClient
     int KCPSend(const char* data, size_t len);
 
     /**
-     * KCP的接收.如果是服务器端的那么要调用ClientManger里的socket的接收.
+     * KCP的接收.
      *
      * @author daixian
      * @date 2020/12/22
@@ -279,6 +279,20 @@ class TCPClient
      * @returns 接收到的数据条数.
      */
     int KCPReceive(std::vector<std::string>& msgs);
+
+    /**
+     * 服务器端的调用ClientManger里的socket的接收,然后调用这个KCP的接收.
+     *
+     * @author daixian
+     * @date 2021/1/14
+     *
+     * @param       data socket接收到的数据.
+     * @param       len  socket接收到的数据长度.
+     * @param [out] msgs The msgs.
+     *
+     * @returns 接收到的数据条数.
+     */
+    int KCPReceive(const char* data, size_t len, std::vector<std::string>& msgs);
 
     /**
      * 当前等待发送的消息计数.如果这个数量太多,那么已经拥塞.

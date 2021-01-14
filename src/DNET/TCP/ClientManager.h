@@ -23,20 +23,20 @@ namespace dxlib {
 class ClientManager
 {
   public:
-    ClientManager()
-    {
-        receBuffUDP.resize(8 * 1024);
-    }
+    ClientManager() {}
     ~ClientManager() {}
 
     // 所有连接了的客户端.
     std::map<int, TCPClient*> mClients;
 
-    // 有了uuid返回的及客户端记录
+    // 有了uuid返回的及客户端记录.
     std::map<std::string, TCPClient*> mAcceptClients;
 
-    // 用户连接成功的事件.
+    // 用户连接成功的事件(TCPServer给它赋值).
     Poco::BasicEvent<TCPEventAccept>* eventAccept = nullptr;
+
+    // tcp监听端口开的同端口UDP，服务器的TCPClient对象中使用了这个来bind发送的upd(TCPServer给它赋值).
+    Poco::Net::DatagramSocket* acceptUDPSocket = nullptr;
 
     // 锁,ClientManager类中和TCPServer类中使用
     //std::mutex mut;
@@ -84,7 +84,7 @@ class ClientManager
      * @author daixian
      * @date 2020/12/21
      *
-     * @param  tcpID Identifier for the TCP.
+     * @param  tcpID TCP的id.
      */
     void RemoveClient(int tcpID)
     {
@@ -112,14 +112,14 @@ class ClientManager
      * @param  uuid      这个客户端的uuid.
      * @param  tempTcpID 当前的临时tcpID.
      *
-     * @returns An int.
+     * @returns 结果的tcpID.
      */
     int RegisterClientWithUUID(const std::string& uuid, int tempTcpID)
     {
         TCPClient* client = mClients[tempTcpID];
         if (mAcceptClients.find(uuid) != mAcceptClients.end()) {
 
-            TCPClient* oldclient = mAcceptClients[uuid];
+            TCPClient* oldclient = mAcceptClients[uuid]; //原先断线的tcp client
             int tcpID = oldclient->TcpID();
 
             client->CopyKCPClient(oldclient); //复制也就是继承kcp部分
@@ -206,39 +206,6 @@ class ClientManager
 
         //原则上mClients的项应该包含了所有的mAcceptClients里的项,这里就不去再检查了.
         mAcceptClients.clear();
-    }
-
-    /************************** kcp ***********************************/
-
-    // tcp监听端口开的同端口UDP,服务器的TCPClient对象中使用了这个来bind发送的upd
-    Poco::Net::DatagramSocket* acceptUDPSocket = nullptr;
-
-    // 接收用的buffer
-    std::vector<char> receBuffUDP;
-
-    // 当前接收长度
-    int receLen = 0;
-
-    /**
-     * Kcp使用的UPD的socket接收.
-     *
-     * @author daixian
-     * @date 2021/1/13
-     */
-    void KCPSocketReceive()
-    {
-        if (acceptUDPSocket != nullptr) {
-            try { //socket尝试接收
-                Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
-                receLen = acceptUDPSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
-            }
-            catch (const Poco::Exception& e) {
-                LogE("ClientManager.KCPSocketReceive():异常e=%s,%s", e.what(), e.message().c_str());
-            }
-            catch (const std::exception& e) {
-                LogE("ClientManager.KCPSocketReceive():异常e=%s", e.what());
-            }
-        }
     }
 
   private:

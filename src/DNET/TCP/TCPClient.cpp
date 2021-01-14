@@ -496,14 +496,15 @@ class TCPClient::Impl
             }
         }
         else {
-            //这是server中的client
-            if (clientManager == nullptr) {
-                LogE("TCPClient.KCPReceive():clientManager==null");
-                return -1;
-            }
-            //实际上此时如果是TCPServer那么已经由TCPServer的函数中调用了一次Socket接收,所以这里直接送数据.
-            return kcpClient->Receive(clientManager->receBuffUDP.data(), clientManager->receLen, msgs);
+            //LogE("TCPClient.KCPReceive():本地udpSocket=null");
+            return -1;
         }
+    }
+
+    int KCPReceive(const char* data, size_t len, std::vector<std::string>& msgs)
+    {
+        //实际上此时如果是TCPServer那么已经由TCPServer的函数中调用了一次Socket接收,所以这里直接送数据.
+        return kcpClient->Receive(data, len, msgs);
     }
 };
 
@@ -687,6 +688,11 @@ int TCPClient::KCPSend(const char* data, size_t len)
 int TCPClient::KCPReceive(std::vector<std::string>& msgs)
 {
     return _impl->KCPReceive(msgs);
+}
+
+int TCPClient::KCPReceive(const char* data, size_t len, std::vector<std::string>& msgs)
+{
+    return _impl->KCPReceive(data, len, msgs);
 }
 
 int TCPClient::KCPWaitSendCount()
