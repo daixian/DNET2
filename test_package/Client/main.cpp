@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     while (true) {
         kcp_c.KCPReceive(msgs);
         poco_assert(msgs.empty());
-        if (kcp_c.KCPWaitSendCount() < 3) {
+        if (kcp_c.KCPWaitSendCount() < 16) {
             std::string str = "1234567890 - " + std::to_string(count);
             int rece = kcp_c.KCPSend(str.c_str(), str.size());
             LogI("发送条数=%d,result=%d", count, rece);
