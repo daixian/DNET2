@@ -14,8 +14,8 @@
 namespace dxlib {
 
 /**
- * 它是一个Tcp Server的所有客户端对象管理.因为所有的这些客户端公用一个KCP的UDP端口.
- * 所以它里面还有一个kcp使用的udpSocket.
+ * 它是一个TcpServer的所有客户端对象管理，因为所有的这些客户端公用一个KCP的UDP端口，
+ * 所以它里面还有一个kcp使用的udpSocket。这个对象指针会传递给TcpServer里面的client，进行一些客户端之间的访问.
  *
  * @author daixian
  * @date 2021/1/13
@@ -210,7 +210,7 @@ class ClientManager
 
     /************************** kcp ***********************************/
 
-    // tcp监听端口开的同端口UDP
+    // tcp监听端口开的同端口UDP,服务器的TCPClient对象中使用了这个来bind发送的upd
     Poco::Net::DatagramSocket* acceptUDPSocket = nullptr;
 
     // 接收用的buffer
@@ -227,15 +227,17 @@ class ClientManager
      */
     void KCPSocketReceive()
     {
-        try { //socket尝试接收
-            Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
-            receLen = acceptUDPSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
-        }
-        catch (const Poco::Exception& e) {
-            LogE("ClientManager.KCPSocketReceive():异常e=%s,%s", e.what(), e.message().c_str());
-        }
-        catch (const std::exception& e) {
-            LogE("ClientManager.KCPSocketReceive():异常e=%s", e.what());
+        if (acceptUDPSocket != nullptr) {
+            try { //socket尝试接收
+                Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
+                receLen = acceptUDPSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
+            }
+            catch (const Poco::Exception& e) {
+                LogE("ClientManager.KCPSocketReceive():异常e=%s,%s", e.what(), e.message().c_str());
+            }
+            catch (const std::exception& e) {
+                LogE("ClientManager.KCPSocketReceive():异常e=%s", e.what());
+            }
         }
     }
 

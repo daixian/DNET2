@@ -49,7 +49,10 @@ class TCPServer::Impl
     // 只能用于认证的Socket
     Poco::Net::ServerSocket* serverSocket = nullptr;
 
-    // 用户连接进来了的事件.
+    // kcp使用的UPD的Socket
+    Poco::Net::DatagramSocket* acceptUDPSocket = nullptr;
+
+    // 用户连接进来了并且完成了握手协议的事件.
     Poco::BasicEvent<TCPEventAccept> eventAccept;
 
     // 对象自身关闭的事件
@@ -66,14 +69,25 @@ class TCPServer::Impl
 
     void Start(const std::string& name, const std::string& host, int port)
     {
+        Close();
+
         this->name = name;
         Poco::Net::SocketAddress sAddr(Poco::Net::AddressFamily::IPv4, host, port);
+        try {
+            serverSocket = new Poco::Net::ServerSocket(sAddr);
+            serverSocket->setBlocking(false); //这里不能设置为false,因为Accept的时候只能Block,执行Accept函数的时候会直接异常.
 
-        serverSocket = new Poco::Net::ServerSocket(sAddr);
-        serverSocket->setBlocking(false); //这里不能设置为false,因为Accept的时候只能Block,执行Accept函数的时候会直接异常.
+            acceptUDPSocket = new Poco::Net::DatagramSocket(sAddr);
+            acceptUDPSocket->setBlocking(false);
 
-        clientManager.acceptUDPSocket = new Poco::Net::DatagramSocket(sAddr);
-        clientManager.acceptUDPSocket->setBlocking(false);
+            clientManager.acceptUDPSocket = acceptUDPSocket;
+        }
+        catch (const Poco::Exception& e) {
+            LogE("TCPServer.Start():创建Socket异常e=%s,%s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("TCPServer.Start():创建Socket异常e=%s", e.what());
+        }
 
         LogI("TCPServer.Start():启动...");
     }
@@ -86,21 +100,22 @@ class TCPServer::Impl
         //关闭所有客户端
         clientManager.Clear();
 
-        if (clientManager.acceptUDPSocket != nullptr) {
+        if (acceptUDPSocket != nullptr) {
             try {
-                clientManager.acceptUDPSocket->close();
-                delete clientManager.acceptUDPSocket;
+                acceptUDPSocket->close();
+                delete acceptUDPSocket;
 
                 serverSocket->close();
                 delete serverSocket;
             }
             catch (const Poco::Exception& e) {
-                LogE("TCPAcceptRunnable.run():关闭Socket异常e=%s,%s", e.what(), e.message().c_str());
+                LogE("TCPServer.Close():关闭Socket异常e=%s,%s", e.what(), e.message().c_str());
             }
             catch (const std::exception& e) {
-                LogE("TCPAcceptRunnable.run():关闭Socket异常e=%s", e.what());
+                LogE("TCPServer.Close():关闭Socket异常e=%s", e.what());
             }
-            clientManager.acceptUDPSocket = nullptr;
+            serverSocket = nullptr;
+            acceptUDPSocket = nullptr;
         }
 
         eventClose.notify(this, TCPEventClose());
@@ -378,7 +393,7 @@ void* TCPServer::GetClientSocket(int tcpID)
 }
 int TCPServer::RemoteCount()
 {
-    return _impl->clientManager.mClients.size();
+    return (int)_impl->clientManager.mClients.size();
 }
 
 std::map<int, TCPClient*> TCPServer::GetRemotes()
