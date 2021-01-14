@@ -120,7 +120,7 @@ class KCPClient
                 return -1;
             }
             else {
-                ikcp_flush(kcp); //尝试暴力flush
+                //ikcp_flush(kcp); //尝试暴力flush
 
                 while (rece >= 0) {
                     rece = ikcp_recv(kcp, kcpReceBuf.data(), (int)kcpReceBuf.size());
@@ -160,7 +160,7 @@ class KCPClient
         if (res < 0) {
             LogE("KCPClient.Send():发送异常返回 res=%d", res);
         }
-        ikcp_flush(kcp); //尝试暴力flush
+        //ikcp_flush(kcp); //尝试暴力flush
 
         ikcp_update(kcp, iclock());
         return res;
