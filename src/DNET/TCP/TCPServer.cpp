@@ -385,12 +385,16 @@ void* TCPServer::GetClientSocket(int tcpID)
 }
 int TCPServer::RemoteCount()
 {
-    return (int)_impl->clientManager.mClients.size();
+    return (int)_impl->clientManager.mAcceptClients.size();
 }
 
 std::map<int, TCPClient*> TCPServer::GetRemotes()
 {
-    return _impl->clientManager.mClients;
+    std::map<int, TCPClient*> map;
+    for (auto& kvp : _impl->clientManager.mAcceptClients) {
+        map[kvp.second->TcpID()] = kvp.second;
+    }
+    return map;
 }
 
 int TCPServer::KCPSend(int tcpID, const char* data, size_t len)
