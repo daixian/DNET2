@@ -50,10 +50,13 @@ typedef void (*MessageProcCallback)(void* sender, int id, const char* message);
  * @author daixian
  * @date 2020/8/22
  *
- * @param [in] server 绑定的服务器.
- * @param      proc   u3d传过来的回调函数指针.
+ * @param [in] server  绑定的服务器.
+ * @param      tcpProc u3d传过来的tcp回调函数指针.
+ * @param      kcpProc u3d传过来的kcp回调函数指针.
+ *
+ * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dxlib::TCPServer* server, MessageProcCallback proc);
+DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dxlib::TCPServer* server, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
 
 /**
  * 创建服务器端.
@@ -123,7 +126,7 @@ DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::TCPServer* server);
  */
 DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::TCPServer* server, int id, const char* msg, int len);
 
-//----------------------------- 客户端 -----------------------------
+//----------------------------------------------------------- 客户端 -----------------------------------------------------------
 
 /**
  * u3d设置一个字符串消息的回调函数进来.
@@ -131,10 +134,13 @@ DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::TCPServer* server, int id, con
  * @author daixian
  * @date 2020/8/22
  *
- * @param [in] client 绑定的客户端.
- * @param       proc   u3d传过来的回调函数指针.
+ * @param [in] client  绑定的客户端.
+ * @param      tcpProc u3d传过来的回调函数指针.
+ * @param      kcpProc The kcp procedure.
+ *
+ * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dxlib::TCPClient* client, MessageProcCallback proc);
+DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dxlib::TCPClient* client, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
 
 /**
  * 创建客户端.
