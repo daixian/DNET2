@@ -1,4 +1,4 @@
-﻿#include "TCPClient.h"
+#include "TCPClient.h"
 #include "xuexuejson/Serialize.hpp"
 
 #include "Poco/Net/Socket.h"
@@ -213,8 +213,8 @@ class TCPClient::Impl
             }
 
             isConnected = false;
-
-            eventClose.notify(this, TCPEventClose());
+            TCPEventClose evArgs = TCPEventClose();
+            eventClose.notify(this, evArgs);
         }
     }
 
@@ -293,7 +293,7 @@ class TCPClient::Impl
         for (size_t msgIndex = 0; msgIndex < msgs.size();) {
             if (types[msgIndex] == 0) {
                 //命令消息:0号命令
-                std::string& acceptStr = std::string(msgs[msgIndex].data(), msgs[msgIndex].size());
+                std::string acceptStr = std::string(msgs[msgIndex].data(), msgs[msgIndex].size());
                 ProcCMDAccept(acceptStr);
 
                 // 移除这个命令消息
@@ -358,7 +358,8 @@ class TCPClient::Impl
                 InitUDPSocket();
                 kcpClient->isServer = false;
                 kcpClient->Bind(udpSocket, socket.peerAddress());
-                eventAccept.notify(this, TCPEventAccept(tcpID, acceptData));
+                TCPEventAccept evArgs = TCPEventAccept(tcpID, acceptData);
+                eventAccept.notify(this, evArgs);
             }
         }
     }
@@ -497,7 +498,8 @@ class TCPClient::Impl
     {
         isError = true;
         errorTime = clock();
-        eventRemoteClose.notify(this, TCPEventRemoteClose(tcpID));
+        TCPEventRemoteClose evArgs = TCPEventRemoteClose(tcpID);
+        eventRemoteClose.notify(this, evArgs);
         Close();
     }
 

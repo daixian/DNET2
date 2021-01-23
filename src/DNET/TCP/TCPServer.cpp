@@ -1,4 +1,4 @@
-﻿#include "TCPServer.h"
+#include "TCPServer.h"
 
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/MulticastSocket.h"
@@ -121,8 +121,8 @@ class TCPServer::Impl
             serverSocket = nullptr;
             acceptUDPSocket = nullptr;
         }
-
-        eventClose.notify(this, TCPEventClose());
+        TCPEventClose evArgs = TCPEventClose();
+        eventClose.notify(this, evArgs);
     }
 
     bool IsStarted()
@@ -220,7 +220,8 @@ class TCPServer::Impl
             //清理出错的客户端
             if (itr->second->isError() && itr->second->TimeFormErrorToNow() > 100) {
                 LogI("TCPServer.Receive():一个客户端 id=%d 已经网络错误,删除它!", itr->second->TcpID());
-                eventRemoteClose.notify(this, TCPEventRemoteClose(itr->second->TcpID())); //发出事件
+                TCPEventRemoteClose evArgs = TCPEventRemoteClose(itr->second->TcpID());
+                eventRemoteClose.notify(this, evArgs); //发出事件
 
                 clientManager.mAcceptClients.erase(itr->second->AcceptData()->uuidC);
                 delete itr->second;

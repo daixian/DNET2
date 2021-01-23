@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 #include <vector>
@@ -142,7 +142,8 @@ class ClientManager
 
         //发出事件
         if (eventAccept != nullptr) {
-            eventAccept->notify(client, TCPEventAccept(client->TcpID(), client->AcceptData()));
+            TCPEventAccept evArgs = TCPEventAccept(client->TcpID(), client->AcceptData());
+            eventAccept->notify(client, evArgs);
         }
 
         return client->TcpID();
