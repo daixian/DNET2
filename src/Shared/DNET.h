@@ -170,6 +170,19 @@ DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dxlib::TCPClient*& clie
 DNET_EXPORT DNetError __cdecl dnClientConnect(dxlib::TCPClient* client, char* host, int port);
 
 /**
+ * 客户端是否已经连接服务器
+ *
+ * @author daixian
+ * @date 2021/1/25
+ *
+ * @param [in]  client     If non-null, the client.
+ * @param [out] isAccepted True if is accepted, false if not.
+ *
+ * @returns A DNetError.
+ */
+DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dxlib::TCPClient* client, bool& isAccepted);
+
+/**
  * 客户端关闭.
  *
  * @author daixian

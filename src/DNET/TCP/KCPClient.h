@@ -167,6 +167,36 @@ class KCPClient
     }
 
     /**
+     * 提供出来让他们可以无脑Update
+     *
+     * @author daixian
+     * @date 2021/1/25
+     */
+    void Update()
+    {
+        if (kcp == nullptr) {
+            LogE("KCPClient.Update():还没有初始化,不能发送!");
+            return;
+        }
+        ikcp_update(kcp, iclock());
+    }
+
+    /**
+     * 提供出来让他们可以暴力flush
+     *
+     * @author daixian
+     * @date 2021/1/25
+     */
+    void Flush()
+    {
+        if (kcp == nullptr) {
+            LogE("KCPClient.flush():还没有初始化,不能发送!");
+            return;
+        }
+        ikcp_flush(kcp); //尝试暴力flush
+    }
+
+    /**
      * 当前等待发送的消息计数.如果这个数量太多,那么已经拥塞.
      *
      * @author daixian

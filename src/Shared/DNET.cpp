@@ -358,6 +358,33 @@ DNET_EXPORT DNetError __cdecl dnClientConnect(dxlib::TCPClient* client, char* ho
 }
 
 /**
+ * 客户端是否已经连接服务器
+ *
+ * @author daixian
+ * @date 2021/1/25
+ *
+ * @param [in]  client     If non-null, the client.
+ * @param [out] isAccepted True if is accepted, false if not.
+ *
+ * @returns A DNetError.
+ */
+DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dxlib::TCPClient* client, bool& isAccepted)
+{
+    dxlib::TCPClient* ptr = findClient(client);
+    if (ptr == nullptr) {
+        return DNetError::InvalidContext;
+    }
+
+    try {
+        isAccepted = ptr->IsAccepted();
+        return DNetError::Ok;
+    }
+    catch (const std::exception&) {
+        return DNetError::Unknown;
+    }
+}
+
+/**
  * 客户端关闭.
  *
  * @author daixian
