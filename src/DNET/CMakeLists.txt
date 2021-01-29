@@ -10,6 +10,8 @@ if(WIN32)
     add_definitions(-D _USERDLL)
 endif()
 
+add_definitions(-D DLOG_UTF8)
+
 # 先自动搜索文件添加算了
 FILE(GLOB_RECURSE SOURCE_LIST "*.cpp" "*.h" "*.hpp" "*.c" "*.cc")
 
