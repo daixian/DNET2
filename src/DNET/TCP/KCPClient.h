@@ -12,9 +12,10 @@
 #include "../kcp/ikcp.h"
 #include "../kcp/clock.hpp"
 
+#include "Protocol/FastPacket.h"
 #include "dlog/dlog.h"
 
-namespace dxlib {
+namespace dnet {
 
 /**
  * KCP的数据收发,这个实现使用的是非阻塞套接字.
@@ -45,8 +46,17 @@ class KCPClient
     // kcp接收数据buffer.
     std::vector<char> kcpReceBuf;
 
-    // 接收到的待处理的数据.
-    std::vector<std::string> receData;
+    //// 接收到的待处理的数据.
+    //std::vector<std::string> receData;
+
+    // 所有接受到的消息的总条数
+    int receMsgCount = 0;
+
+    // 所有发送的消息的总条数
+    int sendMsgCount = 0;
+
+    // TCP通信协议(这里先临时也使用这个,主要是要打进去一个msg type,好和tcp端一致)
+    FastPacket packet;
 
     /**
      * kcp的id.
@@ -92,7 +102,7 @@ class KCPClient
     }
 
     /**
-     * 传入UPD的Socket的API接收到的数据,如果返回-1表示当前接收到的不是信道的消息. 由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
+     * (内部调用)传入UPD的Socket的API接收到的数据,如果返回-1表示当前接收到的不是信道的消息. 由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
      *
      * @author daixian
      * @date 2020/5/12
@@ -103,12 +113,14 @@ class KCPClient
      *
      * @returns 返回大于0的实际接收到的消息条数.
      */
-    int Receive(const char* buff, size_t len, std::vector<std::string>& msgs)
+    int Receive(const char* buff, size_t len, std::vector<TextMessage>& msgs)
     {
         if (socket == nullptr || kcp == nullptr) {
             LogE("KCPClient.Receive():还没有初始化,不能接收!");
             return -2;
         }
+
+        msgs.clear();
 
         if (len != -1) {
             //LogD("KCPClient.Receive(): Socket接收到了数据,长度%d", len);
@@ -125,14 +137,20 @@ class KCPClient
                 while (rece >= 0) {
                     rece = ikcp_recv(kcp, kcpReceBuf.data(), (int)kcpReceBuf.size());
                     if (rece > 0) {
-                        receData.push_back(std::string(kcpReceBuf.data(), rece)); //拷贝记录这一条收到的信息
+                        //这里实际上应该只能找到1条消息
+                        std::vector<TextMessage> msg1;
+                        receMsgCount += packet.Unpack(kcpReceBuf.data(), rece, msg1);
+                        for (size_t i = 0; i < msg1.size(); i++) {
+                            msgs.push_back(msg1[i]);
+                        }
+                        //receData.push_back(std::string(kcpReceBuf.data(), rece)); //拷贝记录这一条收到的信息
                     }
                 }
             }
         }
 
-        msgs = receData;
-        receData.clear();
+        //msgs = receData;
+        //receData.clear();
 
         ikcp_update(kcp, iclock()); //需要定时调用.在调用接收或者发送之后调用好了
         return (int)msgs.size();
@@ -149,14 +167,19 @@ class KCPClient
      *
      * @returns 正常发送成功返回0.
      */
-    int Send(const char* data, size_t len)
+    int Send(const char* data, size_t len, int type = -1)
     {
         if (socket == nullptr || kcp == nullptr) {
             LogE("KCPClient.Send():还没有初始化,不能发送!");
             return -1;
         }
 
-        int res = ikcp_send(kcp, data, (int)len);
+        //数据打包
+        std::vector<char> package;
+        packet.Pack(data, (int)len, package, type);
+        sendMsgCount++;
+
+        int res = ikcp_send(kcp, package.data(), (int)package.size());
         if (res < 0) {
             LogE("KCPClient.Send():发送异常返回 res=%d", res);
         }
@@ -216,4 +239,4 @@ class KCPClient
   private:
 };
 
-} // namespace dxlib
+} // namespace dnet

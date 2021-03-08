@@ -5,7 +5,7 @@
 #include "dlog/dlog.h"
 #include <atomic>
 
-using namespace dxlib;
+using namespace dnet;
 using namespace std;
 
 TEST(stl, erase)

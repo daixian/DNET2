@@ -10,7 +10,7 @@
 #include "Poco/BasicEvent.h"
 #include "Poco/Delegate.h"
 
-namespace dxlib {
+namespace dnet {
 
 class TCPServer
 {
@@ -124,10 +124,11 @@ class TCPServer
      * @param  tcpID tcp连接的ID.
      * @param  data  要发送的数据.
      * @param  len   数据长度.
+     * @param  type (Optional) 这个数据的类型,注意-1024是认证命令等保留类型,不能使用,应该使用非负的数作为类型.
      *
      * @returns 发送成功的数据长度.
      */
-    int Send(int tcpID, const char* data, size_t len);
+    int Send(int tcpID, const char* data, size_t len, int type = -1);
 
     /**
      * 可读取(接收)的数据数.
@@ -166,28 +167,30 @@ class TCPServer
     int WaitAccepted(int tcpID, int waitCount = 50);
 
     /**
-     * 尝试非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败，由于kcp的协议，只有接收成功了这里才会返回>0的实际接收消息条数.
+     * 尝试非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败,只有接收成功了这里才会返回>0的实际接收消息条数.
      *
      * @author daixian
      * @date 2020/5/12
      *
-     * @param [out] msgs 以conv为key的所有客户端的消息.
+     * @param [out] msgs  以conv为key的客户端的所有消息.
      *
      * @returns 返回大于0的实际接收到的消息条数.
      */
-    int Receive(std::map<int, std::vector<std::vector<char>>>& msgs);
+
+    int Receive(std::map<int, std::vector<BinMessage>>& msgs);
 
     /**
-     * Receives the given msgs
+     * 尝试非阻塞的接收.返回-1表示没有接收到完整的消息或者接收失败,只有接收成功了这里才会返回>0的实际接收消息条数.
      *
      * @author daixian
      * @date 2020/12/22
      *
-     * @param [out] msgs The msgs.
+     * @param [out] types 以conv为key的所有客户端的消息类型.
+     * @param [out] msgs  以conv为key的所有客户端的消息.
      *
      * @returns 接收到的数据条数.
      */
-    int Receive(std::map<int, std::vector<std::string>>& msgs);
+    int Receive(std::map<int, std::vector<TextMessage>>& msgs);
 
     /**
      * 得到这个客户端的Poco的Socket指针(Poco::Net::StreamSocket).
@@ -245,11 +248,11 @@ class TCPServer
      *
      * @returns An int.
      */
-    int KCPReceive(std::map<int, std::vector<std::string>>& msgs);
+    int KCPReceive(std::map<int, std::vector<TextMessage>>& msgs);
 
   private:
     class Impl;
     Impl* _impl;
 };
 
-} // namespace dxlib
+} // namespace dnet

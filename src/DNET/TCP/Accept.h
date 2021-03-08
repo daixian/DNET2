@@ -4,7 +4,7 @@
 #include <memory>
 #include "xuexuejson/Serialize.hpp"
 
-namespace dxlib {
+namespace dnet {
 
 /**
  * 一种握手方式.
@@ -114,4 +114,4 @@ class Accept : XUEXUE_JSON_OBJECT
     bool _isVerified = false;
 };
 
-} // namespace dxlib
+} // namespace dnet

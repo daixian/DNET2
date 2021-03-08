@@ -9,7 +9,7 @@
 
 #include "DNET/TCP/TCPClient.h"
 
-using namespace dxlib;
+using namespace dnet;
 using namespace std;
 
 class Config : XUEXUE_JSON_OBJECT
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
     kcp_c.WaitAccepted();
 
     int count = 0;
-    std::vector<std::string> msgs;
+    std::vector<TextMessage> msgs;
     while (true) {
         kcp_c.KCPReceive(msgs);
         poco_assert(msgs.empty());

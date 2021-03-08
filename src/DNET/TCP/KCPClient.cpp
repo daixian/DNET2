@@ -12,7 +12,7 @@
 
 #include "TCPClient.h"
 
-namespace dxlib {
+namespace dnet {
 
 //TODO: 可以让上层通过检测 ikcp_waitsnd 函数来判断还有多少包没有发出去，灵活抉择是否向 snd_queue 缓存追加数据包还是其他。
 //TODO: 管理大规模连接 https://github.com/skywind3000/kcp/wiki/KCP-Best-Practice
@@ -74,4 +74,4 @@ void KCPClient::Create(int conv)
     //kcp->fastresend = 1;
 }
 
-} // namespace dxlib
+} // namespace dnet

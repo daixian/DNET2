@@ -4,7 +4,7 @@
 #include <vector>
 #include "Accept.h"
 
-namespace dxlib {
+namespace dnet {
 
 /**
  * 服务器端接收到的用户认证的消息.

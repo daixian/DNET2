@@ -19,7 +19,9 @@
 
 #define XUEXUE_TCP_CLIENT_BUFFER_SIZE 8 * 1024
 
-namespace dxlib {
+#define XUEXUE_TCP_CLIENT_INTERNAL_CMD_TYPE -1024
+
+namespace dnet {
 
 class TCPClient::Impl
 {
@@ -95,7 +97,7 @@ class TCPClient::Impl
     // 所有接受到的消息的总条数
     int receMsgCount = 0;
 
-    // 所有接受到的消息的总条数
+    // 所有发送的消息的总条数
     int sendMsgCount = 0;
 
     // 用户连接成功的事件.
@@ -261,44 +263,22 @@ class TCPClient::Impl
 
         acceptData = new Accept();
         std::string acceptStr = acceptData->CreateAcceptString(uuid, name); //创建一个认证的自字符串发给服务器
-        return Send(acceptStr.c_str(), acceptStr.size(), 0);
+        return Send(acceptStr.c_str(), acceptStr.size(), XUEXUE_TCP_CLIENT_INTERNAL_CMD_TYPE);
     }
 
     // 使用所有接受到的消息然后过滤其中的CMD消息执行,擦除CMD消息
-    int ProcCMD(std::vector<std::string>& msgs, std::vector<int>& types)
+    template <typename T>
+    int ProcCMD(std::vector<Message<T>>& msgs)
     {
         //遍历所有收到的消息
         for (size_t msgIndex = 0; msgIndex < msgs.size();) {
-            if (types[msgIndex] == 0) {
+            if (msgs[msgIndex].type == XUEXUE_TCP_CLIENT_INTERNAL_CMD_TYPE) {
                 //命令消息:0号命令
-                std::string& acceptStr = msgs[msgIndex];
+                std::string& acceptStr = msgs[msgIndex].to_string();
                 ProcCMDAccept(acceptStr);
 
                 // 移除这个命令消息
                 msgs.erase(msgs.begin() + msgIndex);
-                types.erase(types.begin() + msgIndex);
-            }
-            else {
-                msgIndex++;
-            }
-        }
-
-        return (int)msgs.size();
-    }
-
-    // 使用所有接受到的消息然后过滤其中的CMD消息执行,擦除CMD消息
-    int ProcCMD(std::vector<std::vector<char>>& msgs, std::vector<int>& types)
-    {
-        //遍历所有收到的消息
-        for (size_t msgIndex = 0; msgIndex < msgs.size();) {
-            if (types[msgIndex] == 0) {
-                //命令消息:0号命令
-                std::string acceptStr = std::string(msgs[msgIndex].data(), msgs[msgIndex].size());
-                ProcCMDAccept(acceptStr);
-
-                // 移除这个命令消息
-                msgs.erase(msgs.begin() + msgIndex);
-                types.erase(types.begin() + msgIndex);
             }
             else {
                 msgIndex++;
@@ -325,7 +305,7 @@ class TCPClient::Impl
                 std::string replyStr = acceptData->ReplyAcceptString(acceptStr, uuid, name, tcpID);
                 poco_assert(!replyStr.empty());
                 // replyStr有内容,有效的认证信息,自己是服务器端
-                Send(replyStr.c_str(), replyStr.size(), 0);
+                Send(replyStr.c_str(), replyStr.size(), XUEXUE_TCP_CLIENT_INTERNAL_CMD_TYPE);
 
                 LogI("TCPClient.ProcAccept():添加了一个新客户端%s,Addr=%s:%d,分配conv=%d",
                      acceptData->uuidC.c_str(),
@@ -405,10 +385,9 @@ class TCPClient::Impl
      * @returns 接收到的数据条数.
      */
     template <typename T>
-    int Receive(std::vector<T>& msgs, std::vector<int>& types)
+    int Receive(std::vector<Message<T>>& msgs)
     {
         msgs.clear();
-        types.clear();
 
         if (!isConnected) {
             return -1;
@@ -429,7 +408,7 @@ class TCPClient::Impl
                     if (res <= 0) {
                         break;
                     }
-                    receMsgCount += packet.Unpack(receBuff.data(), res, msgs, types);
+                    receMsgCount += packet.Unpack(receBuff.data(), res, msgs);
                     lastTcpReceTime = clock();
                 }
                 else {
@@ -449,7 +428,7 @@ class TCPClient::Impl
         return (int)msgs.size();
     }
 
-    int KCPReceive(std::vector<std::string>& msgs)
+    int KCPReceive(std::vector<TextMessage>& msgs)
     {
         if (!isConnected) {
             return -1;
@@ -483,7 +462,7 @@ class TCPClient::Impl
         return -1;
     }
 
-    int KCPReceive(const char* data, size_t len, std::vector<std::string>& msgs)
+    int KCPReceive(const char* data, size_t len, std::vector<TextMessage>& msgs)
     {
         //实际上此时如果是TCPServer那么已经由TCPServer的函数中调用了一次Socket接收,所以这里直接送数据.
         int res = kcpClient->Receive(data, len, msgs);
@@ -631,23 +610,21 @@ int TCPClient::Connect(const std::string& host, int port)
     return _impl->Connect(host, port);
 }
 
-int TCPClient::Send(const char* data, size_t len)
+int TCPClient::Send(const char* data, size_t len, int type)
 {
-    return _impl->Send(data, len, 1); //规定用户数据类型为1
+    return _impl->Send(data, len, type); //未规定用户数据类型为1
 }
 
-int TCPClient::Receive(std::vector<std::vector<char>>& msgs)
+int TCPClient::Receive(std::vector<BinMessage>& msgs)
 {
-    std::vector<int> types;
-    _impl->Receive(msgs, types);
-    return _impl->ProcCMD(msgs, types);
+    _impl->Receive(msgs);
+    return _impl->ProcCMD(msgs);
 }
 
-int TCPClient::Receive(std::vector<std::string>& msgs)
+int TCPClient::Receive(std::vector<TextMessage>& msgs)
 {
-    std::vector<int> types;
-    _impl->Receive(msgs, types);
-    return _impl->ProcCMD(msgs, types);
+    _impl->Receive(msgs);
+    return _impl->ProcCMD(msgs);
 }
 
 int TCPClient::Available()
@@ -674,7 +651,7 @@ int TCPClient::WaitAvailable(int waitCount)
 int TCPClient::WaitAccepted(int waitCount)
 {
     for (size_t i = 0; i < waitCount; i++) {
-        std::vector<std::string> msgs;
+        std::vector<TextMessage> msgs;
         Receive(msgs);
 
         if (IsAccepted()) { //这里应该是错误,就不用等了
@@ -701,20 +678,20 @@ void TCPClient::CopyKCPClient(TCPClient* src)
     _impl->kcpClient = src->_impl->kcpClient;
 }
 
-int TCPClient::KCPSend(const char* data, size_t len)
+int TCPClient::KCPSend(const char* data, size_t len, int type)
 {
     if (_impl->kcpClient == nullptr) {
         return -1;
     }
-    return _impl->kcpClient->Send(data, len);
+    return _impl->kcpClient->Send(data, len, type);
 }
 
-int TCPClient::KCPReceive(std::vector<std::string>& msgs)
+int TCPClient::KCPReceive(std::vector<TextMessage>& msgs)
 {
     return _impl->KCPReceive(msgs);
 }
 
-int TCPClient::KCPReceive(const char* data, size_t len, std::vector<std::string>& msgs)
+int TCPClient::KCPReceive(const char* data, size_t len, std::vector<TextMessage>& msgs)
 {
     return _impl->KCPReceive(data, len, msgs);
 }
@@ -742,4 +719,4 @@ Poco::BasicEvent<TCPEventRemoteClose>& TCPClient::EventRemoteClose()
     return _impl->eventRemoteClose;
 }
 
-} // namespace dxlib
+} // namespace dnet

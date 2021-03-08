@@ -10,8 +10,9 @@
 
 #include "Poco/BasicEvent.h"
 #include "Poco/Delegate.h"
+#include "Protocol/FastPacket.h"
 
-namespace dxlib {
+namespace dnet {
 
 /**
  * 一个TCP客户端.它同时指单纯的客户端和服务器端的客户端.
@@ -167,17 +168,18 @@ class TCPClient
     int Connect(const std::string& host, int port);
 
     /**
-     * 非阻塞的发送一段数据.返回发送的字节数(打包后的)，可能是少于指定的字节数。某些套接字实现也可能返回负数,表示特定条件的值。
+     * 非阻塞的发送一段数据.返回发送的字节数(打包后的),可能是少于指定的字节数。某些套接字实现也可能返回负数,表示特定条件的值。
      *
      * @author daixian
      * @date 2020/5/12
      *
      * @param  data 要发送的数据.
      * @param  len  数据长度.
+     * @param  type (Optional) 这个数据的类型,注意-1024是认证命令等保留类型,不能使用,应该使用非负的数作为类型.
      *
      * @returns 返回发送成功的长度(打包后的).
      */
-    int Send(const char* data, size_t len);
+    int Send(const char* data, size_t len, int type = -1);
 
     /**
      * 可读取(接收)的数据数.
@@ -207,11 +209,11 @@ class TCPClient
      * @author daixian
      * @date 2020/12/22
      *
-     * @param [out] msgs The msgs.
+     * @param [out] msgs 消息内容.
      *
      * @returns 接收到的数据条数.
      */
-    int Receive(std::vector<std::vector<char>>& msgs);
+    int Receive(std::vector<BinMessage>& msgs);
 
     /**
      * Receives the given msgs
@@ -219,11 +221,11 @@ class TCPClient
      * @author daixian
      * @date 2020/12/22
      *
-     * @param [out] msgs The msgs.
+     * @param [out] msgs 消息内容.
      *
      * @returns 接收到的数据条数.
      */
-    int Receive(std::vector<std::string>& msgs);
+    int Receive(std::vector<TextMessage>& msgs);
 
     /**
      * 得到这个客户端的Poco的Socket指针(Poco::Net::StreamSocket).
@@ -263,10 +265,11 @@ class TCPClient
      *
      * @param  data The data.
      * @param  len  The length.
+     * @param  type (Optional) The type.
      *
      * @returns An int.
      */
-    int KCPSend(const char* data, size_t len);
+    int KCPSend(const char* data, size_t len, int type = -1);
 
     /**
      * KCP的接收.
@@ -278,10 +281,10 @@ class TCPClient
      *
      * @returns 接收到的数据条数.
      */
-    int KCPReceive(std::vector<std::string>& msgs);
+    int KCPReceive(std::vector<TextMessage>& msgs);
 
     /**
-     * 服务器端的调用ClientManger里的socket的接收,然后调用这个KCP的接收.
+     * (内部调用)服务器端的调用ClientManger里的socket的接收,然后调用这个KCP的接收.
      *
      * @author daixian
      * @date 2021/1/14
@@ -292,7 +295,7 @@ class TCPClient
      *
      * @returns 接收到的数据条数.
      */
-    int KCPReceive(const char* data, size_t len, std::vector<std::string>& msgs);
+    int KCPReceive(const char* data, size_t len, std::vector<TextMessage>& msgs);
 
     /**
      * 当前等待发送的消息计数.如果这个数量太多,那么已经拥塞.
@@ -341,4 +344,4 @@ class TCPClient
     std::shared_ptr<Impl> _impl;
 };
 
-} // namespace dxlib
+} // namespace dnet

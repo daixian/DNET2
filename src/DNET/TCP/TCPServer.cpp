@@ -22,7 +22,7 @@
 #include "ClientManager.h"
 #include "./Protocol/FastPacket.h"
 
-namespace dxlib {
+namespace dnet {
 
 class TCPServer::Impl
 {
@@ -135,14 +135,14 @@ class TCPServer::Impl
         }
     }
 
-    int Send(int tcpID, const char* data, size_t len)
+    int Send(int tcpID, const char* data, size_t len, int type)
     {
         TCPClient* client = clientManager.GetClient(tcpID);
         if (client == nullptr) {
             return -1;
         }
 
-        return client->Send(data, len); //发送打包后的数据
+        return client->Send(data, len, type); //发送打包后的数据
     }
 
     //客户端接收查询
@@ -204,7 +204,7 @@ class TCPServer::Impl
     }
 
     template <typename T>
-    int Receive(std::map<int, std::vector<T>>& msgs)
+    int Receive(std::map<int, std::vector<Message<T>>>& msgs)
     {
         // 执行tcp socket的accept
         SocketAccept();
@@ -212,7 +212,7 @@ class TCPServer::Impl
         msgs.clear();
 
         for (auto itr = clientManager.mClients.begin(); itr != clientManager.mClients.end();) {
-            std::vector<T> clientMsgs;
+            std::vector<Message<T>> clientMsgs; //TODO:这里考虑先创建在传入参数,如果没有消息再擦除
             if (itr->second->Receive(clientMsgs) > 0) {
                 msgs[itr->first] = clientMsgs;
             }
@@ -245,7 +245,7 @@ class TCPServer::Impl
         return client->KCPSend(data, len); //发送打包后的数据
     }
 
-    int KCPReceive(std::map<int, std::vector<std::string>>& msgs)
+    int KCPReceive(std::map<int, std::vector<TextMessage>>& msgs)
     {
         if (acceptUDPSocket == nullptr) {
             return -1;
@@ -267,7 +267,7 @@ class TCPServer::Impl
         }
 
         for (auto itr = clientManager.mAcceptClients.begin(); itr != clientManager.mAcceptClients.end();) {
-            std::vector<std::string> clientMsgs;
+            std::vector<TextMessage> clientMsgs;
             int res = itr->second->KCPReceive(receBuffUDP.data(), receLen, clientMsgs);
             if (res < 0) {
                 //-1或者未初始化等其他值是不匹配的信道
@@ -331,9 +331,9 @@ void TCPServer::WaitStarted()
     }
 }
 
-int TCPServer::Send(int tcpID, const char* data, size_t len)
+int TCPServer::Send(int tcpID, const char* data, size_t len, int type)
 {
-    return _impl->Send(tcpID, data, len);
+    return _impl->Send(tcpID, data, len, type);
 }
 
 Poco::BasicEvent<TCPEventAccept>& TCPServer::EventAccept()
@@ -356,12 +356,12 @@ int TCPServer::Available(int tcpID)
     return _impl->Available(tcpID);
 }
 
-int TCPServer::Receive(std::map<int, std::vector<std::vector<char>>>& msgs)
+int TCPServer::Receive(std::map<int, std::vector<BinMessage>>& msgs)
 {
     return _impl->Receive(msgs);
 }
 
-int TCPServer::Receive(std::map<int, std::vector<std::string>>& msgs)
+int TCPServer::Receive(std::map<int, std::vector<TextMessage>>& msgs)
 {
     return _impl->Receive(msgs);
 }
@@ -403,8 +403,8 @@ int TCPServer::KCPSend(int tcpID, const char* data, size_t len)
     return _impl->KCPSend(tcpID, data, len);
 }
 
-int TCPServer::KCPReceive(std::map<int, std::vector<std::string>>& msgs)
+int TCPServer::KCPReceive(std::map<int, std::vector<TextMessage>>& msgs)
 {
     return _impl->KCPReceive(msgs);
 }
-} // namespace dxlib
+} // namespace dnet

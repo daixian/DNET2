@@ -1,7 +1,7 @@
 ﻿#include "Accept.h"
 #include "Poco/Random.h"
 
-namespace dxlib {
+namespace dnet {
 
 Accept::Accept()
 {

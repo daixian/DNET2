@@ -16,7 +16,7 @@
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Delegate.h"
 
-using namespace dxlib;
+using namespace dnet;
 using namespace std;
 
 using Poco::IOException;
@@ -100,10 +100,10 @@ TEST(TCPServer, OpenClose)
 
     while (server.RemoteCount() == 0 || !server.GetRemotes().begin()->second->IsAccepted()) {
         this_thread::sleep_for(std::chrono::milliseconds(10));
-        std::map<int, std::vector<std::vector<char>>> msgs; //无脑调用接收
+        std::map<int, std::vector<BinMessage>> msgs; //无脑调用接收
         server.Receive(msgs);
 
-        std::vector<std::string> cmsgs;
+        std::vector<TextMessage> cmsgs;
         client.Receive(cmsgs); //无脑调用接收
     }
     ASSERT_TRUE(target.onEventAcceptCount == 1);
@@ -112,7 +112,7 @@ TEST(TCPServer, OpenClose)
 
     int tcpId = server.GetRemotes().begin()->first;
     {
-        std::map<int, std::vector<std::vector<char>>> msgs;
+        std::map<int, std::vector<BinMessage>> msgs;
         server.Receive(msgs);
         if (!msgs.empty())
             for (auto& kvp : msgs) {
@@ -143,27 +143,27 @@ TEST(TCPServer, sendBytes)
 
     int tcpId = server.GetRemotes().begin()->first;
     {
-        std::map<int, std::vector<std::vector<char>>> msgs;
+        std::map<int, std::vector<BinMessage>> msgs;
         server.WaitAvailable(tcpId); //只有一个客户端,那么id应该为0
         server.Receive(msgs);
         if (!msg.empty())
             for (auto& kvp : msgs) {
                 ASSERT_EQ(kvp.second.size(), 1);
-                ASSERT_EQ(kvp.second[0].size(), msg.size());
+                ASSERT_EQ(kvp.second[0].data.size(), msg.size());
                 LogI("服务器收到了客户端数据!");
                 //回发这条数据
-                server.Send(kvp.first, kvp.second[0].data(), kvp.second[0].size());
+                server.Send(kvp.first, kvp.second[0].data.data(), kvp.second[0].data.size());
             }
     }
 
     {
-        std::vector<std::vector<char>> msgs;
+        std::vector<BinMessage> msgs;
         client.WaitAvailable();
         client.Receive(msgs);
         if (!msgs.empty()) {
             ASSERT_TRUE(client.IsAccepted());
             ASSERT_EQ(msgs.size(), 1);
-            ASSERT_EQ(msgs[0].size(), msg.size());
+            ASSERT_EQ(msgs[0].data.size(), msg.size());
             LogI("客户端收到了服务器数据!");
         }
     }
@@ -185,26 +185,26 @@ TEST(TCPServer, sendBytes_localhost)
     int tcpId = server.GetRemotes().begin()->first;
 
     {
-        std::map<int, std::vector<std::vector<char>>> msgs;
+        std::map<int, std::vector<BinMessage>> msgs;
         server.WaitAvailable(tcpId); //只有一个客户端,那么id应该为0
         server.Receive(msgs);
         if (!msg.empty())
             for (auto& kvp : msgs) {
                 ASSERT_EQ(kvp.second.size(), 1);
-                ASSERT_EQ(kvp.second[0].size(), msg.size());
+                ASSERT_EQ(kvp.second[0].data.size(), msg.size());
                 LogI("服务器收到了客户端数据!");
                 //回发这条数据
-                server.Send(kvp.first, kvp.second[0].data(), kvp.second[0].size());
+                server.Send(kvp.first, kvp.second[0].data.data(), kvp.second[0].data.size());
             }
     }
 
     {
-        std::vector<std::vector<char>> msgs;
+        std::vector<BinMessage> msgs;
         client.WaitAvailable();
         client.Receive(msgs);
         if (!msgs.empty()) {
             ASSERT_EQ(msgs.size(), 1);
-            ASSERT_EQ(msgs[0].size(), msg.size());
+            ASSERT_EQ(msgs[0].data.size(), msg.size());
             LogI("客户端收到了服务器数据!");
         }
     }
@@ -225,24 +225,24 @@ TEST(TCPServer, sendText)
     int res = client.Send(msg.c_str(), msg.size());
     int tcpId = server.GetRemotes().begin()->first;
 
-    std::map<int, std::vector<std::string>> msgs;
+    std::map<int, std::vector<TextMessage>> msgs;
     server.WaitAvailable(tcpId); //只有一个客户端,那么id应该为0
     server.Receive(msgs);
     if (!msg.empty())
         for (auto& kvp : msgs) {
             ASSERT_EQ(kvp.second.size(), 1);
-            ASSERT_EQ(kvp.second[0], msg);
+            ASSERT_EQ(kvp.second[0].data, msg);
             LogI("服务器收到了客户端数据!");
             //回发这条数据
-            server.Send(kvp.first, kvp.second[0].data(), kvp.second[0].size());
+            server.Send(kvp.first, kvp.second[0].data.data(), kvp.second[0].data.size());
         }
 
-    std::vector<std::string> clienMsgs;
+    std::vector<TextMessage> clienMsgs;
     client.WaitAvailable();
     client.Receive(clienMsgs);
     if (!clienMsgs.empty()) {
         ASSERT_EQ(clienMsgs.size(), 1);
-        ASSERT_EQ(clienMsgs[0], msg);
+        ASSERT_EQ(clienMsgs[0].data, msg);
         LogI("客户端收到了服务器数据!");
     }
 
@@ -260,18 +260,18 @@ TEST(TCPServer, sendText_128Client)
     for (size_t i = 0; i < clients.size(); i++) {
         clients[i].Connect("127.0.0.1", 8341);
 
-        std::map<int, std::vector<std::string>> msgs;
+        std::map<int, std::vector<TextMessage>> msgs;
         server.Receive(msgs); //无脑调用接收
     }
 
     //等待所有客户端连接完成
     while (true) {
-        std::map<int, std::vector<std::string>> msgs;
+        std::map<int, std::vector<TextMessage>> msgs;
         server.Receive(msgs); //无脑调用接收
 
         int acceptCount = 0;
         for (size_t i = 0; i < clients.size(); i++) {
-            std::vector<std::string> cmsgs;
+            std::vector<TextMessage> cmsgs;
             clients[i].Receive(cmsgs); //无脑调用接收
             if (clients[i].IsAccepted()) {
                 acceptCount++;
@@ -294,15 +294,15 @@ TEST(TCPServer, sendText_128Client)
 
     //服务器接收
     {
-        std::map<int, std::vector<std::string>> msgs;
+        std::map<int, std::vector<TextMessage>> msgs;
         server.Receive(msgs);
         if (!msg.empty()) {
             for (auto& kvp : msgs) {
                 ASSERT_EQ(kvp.second.size(), 1);
-                ASSERT_EQ(kvp.second[0], msg);
+                ASSERT_EQ(kvp.second[0].data, msg);
                 LogI("服务器收到了客户端%d数据!", kvp.first);
                 //回发这条数据
-                server.Send(kvp.first, kvp.second[0].data(), kvp.second[0].size());
+                server.Send(kvp.first, kvp.second[0].data.data(), kvp.second[0].data.size());
             }
         }
     }
@@ -310,12 +310,12 @@ TEST(TCPServer, sendText_128Client)
     //客户端接收
     {
         for (size_t i = 0; i < clients.size(); i++) {
-            std::vector<std::string> msgs;
+            std::vector<TextMessage> msgs;
             clients[i].WaitAvailable();
             clients[i].Receive(msgs);
             if (!msgs.empty()) {
                 ASSERT_EQ(msgs.size(), 1);
-                ASSERT_EQ(msgs[0], msg);
+                ASSERT_EQ(msgs[0].data, msg);
                 LogI("客户端%d收到了服务器数据!", i);
             }
         }
@@ -336,12 +336,12 @@ TEST(TCPServer, sendText2)
 
     //等待所有客户端连接完成
     while (true) {
-        std::map<int, std::vector<std::string>> msgs;
+        std::map<int, std::vector<TextMessage>> msgs;
         server.Receive(msgs); //无脑调用接收
 
         int acceptCount = 0;
 
-        std::vector<std::string> cmsgs;
+        std::vector<TextMessage> cmsgs;
         client.Receive(cmsgs); //无脑调用接收
         if (client.IsAccepted()) {
             break;
@@ -361,7 +361,7 @@ TEST(TCPServer, sendText2)
     {
         int receCount = 0;
         while (receCount < 2) {
-            std::map<int, std::vector<std::string>> msgs;
+            std::map<int, std::vector<TextMessage>> msgs;
             server.WaitAvailable(tcpId); //只有一个客户端,那么id应该为0
             server.Receive(msgs);
             if (!msg.empty())
@@ -371,25 +371,25 @@ TEST(TCPServer, sendText2)
                     LogI("服务器收到了客户端%d数据!", kvp.second.size());
 
                     ASSERT_EQ(kvp.second.size(), 2); //一次应该收到了两条数据
-                    ASSERT_EQ(kvp.second[0], msg);
-                    ASSERT_EQ(kvp.second[1], msg2);
+                    ASSERT_EQ(kvp.second[0].data, msg);
+                    ASSERT_EQ(kvp.second[1].data, msg2);
 
                     //回发这条数据
-                    server.Send(kvp.first, kvp.second[0].data(), kvp.second[0].size());
-                    server.Send(kvp.first, kvp.second[1].data(), kvp.second[1].size());
+                    server.Send(kvp.first, kvp.second[0].data.data(), kvp.second[0].data.size());
+                    server.Send(kvp.first, kvp.second[1].data.data(), kvp.second[1].data.size());
                 }
         }
     }
 
-    std::vector<std::string> clienMsgs;
+    std::vector<TextMessage> clienMsgs;
     client.WaitAvailable();
     client.Receive(clienMsgs);
     if (!clienMsgs.empty()) {
         LogI("客户端收到了服务器数据%d条!", clienMsgs.size());
 
         ASSERT_EQ(clienMsgs.size(), 2);
-        ASSERT_EQ(clienMsgs[0], msg);
-        ASSERT_EQ(clienMsgs[1], msg2);
+        ASSERT_EQ(clienMsgs[0].data, msg);
+        ASSERT_EQ(clienMsgs[1].data, msg2);
     }
 
     server.Close();

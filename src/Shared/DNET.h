@@ -42,7 +42,7 @@ enum class DNetError
 };
 
 // 字符串消息的处理回调函数指针类型
-typedef void (*MessageProcCallback)(void* sender, int id, const char* message);
+typedef void (*MessageProcCallback)(void* sender, int id, int msgType, const char* message);
 
 /**
  * u3d设置一个字符串消息的回调函数进来.
@@ -56,7 +56,7 @@ typedef void (*MessageProcCallback)(void* sender, int id, const char* message);
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dxlib::TCPServer* server, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
+DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dnet::TCPServer* server, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
 
 /**
  * 创建服务器端.
@@ -71,7 +71,7 @@ DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dxlib::TCPServer* server, M
  *
  * @returns 成功返回0.
  */
-DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host, int port, dxlib::TCPServer*& server);
+DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host, int port, dnet::TCPServer*& server);
 
 /**
  * 服务器启动.
@@ -85,7 +85,7 @@ DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host,
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerStart(dxlib::TCPServer* server);
+DNET_EXPORT DNetError __cdecl dnServerStart(dnet::TCPServer* server);
 
 /**
  * 服务器关闭.
@@ -97,7 +97,7 @@ DNET_EXPORT DNetError __cdecl dnServerStart(dxlib::TCPServer* server);
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerClose(dxlib::TCPServer* server);
+DNET_EXPORT DNetError __cdecl dnServerClose(dnet::TCPServer* server);
 
 /**
  * 服务器Update,实际上就是接收.
@@ -109,7 +109,7 @@ DNET_EXPORT DNetError __cdecl dnServerClose(dxlib::TCPServer* server);
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::TCPServer* server);
+DNET_EXPORT DNetError __cdecl dnServerUpdate(dnet::TCPServer* server);
 
 /**
  * 向某个客户端发送数据.
@@ -124,7 +124,7 @@ DNET_EXPORT DNetError __cdecl dnServerUpdate(dxlib::TCPServer* server);
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::TCPServer* server, int id, const char* msg, int len);
+DNET_EXPORT DNetError __cdecl dnServerSend(dnet::TCPServer* server, int id, const char* msg, int len);
 
 //----------------------------------------------------------- 客户端 -----------------------------------------------------------
 
@@ -140,7 +140,7 @@ DNET_EXPORT DNetError __cdecl dnServerSend(dxlib::TCPServer* server, int id, con
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dxlib::TCPClient* client, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
+DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dnet::TCPClient* client, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
 
 /**
  * 创建客户端.
@@ -153,7 +153,7 @@ DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dxlib::TCPClient* client, M
  *
  * @returns 成功返回0.
  */
-DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dxlib::TCPClient*& client);
+DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dnet::TCPClient*& client);
 
 /**
  * 客户端连接服务器.
@@ -167,7 +167,7 @@ DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dxlib::TCPClient*& clie
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientConnect(dxlib::TCPClient* client, char* host, int port);
+DNET_EXPORT DNetError __cdecl dnClientConnect(dnet::TCPClient* client, char* host, int port);
 
 /**
  * 客户端是否已经连接服务器
@@ -180,7 +180,7 @@ DNET_EXPORT DNetError __cdecl dnClientConnect(dxlib::TCPClient* client, char* ho
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dxlib::TCPClient* client, bool& isAccepted);
+DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dnet::TCPClient* client, bool& isAccepted);
 
 /**
  * 客户端关闭.
@@ -192,7 +192,7 @@ DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dxlib::TCPClient* client, bool&
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientClose(dxlib::TCPClient* client);
+DNET_EXPORT DNetError __cdecl dnClientClose(dnet::TCPClient* client);
 
 /**
  * 客户端Update,实际上就是接收.
@@ -204,4 +204,4 @@ DNET_EXPORT DNetError __cdecl dnClientClose(dxlib::TCPClient* client);
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientUpdate(dxlib::TCPClient* client);
+DNET_EXPORT DNetError __cdecl dnClientUpdate(dnet::TCPClient* client);

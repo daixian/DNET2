@@ -6,7 +6,7 @@
 
 #include "xuexue/csharp/csharp.h"
 
-using namespace dxlib;
+using namespace dnet;
 using namespace std;
 
 int main(int argc, char* argv[])
@@ -22,22 +22,22 @@ int main(int argc, char* argv[])
     kcp_s.Start();
 
     while (true) {
-        std::map<int, std::vector<std::string>> msgs;
+        std::map<int, std::vector<TextMessage>> msgs;
         kcp_s.Receive(msgs);
         if (!msgs.empty()) {
             for (auto& kvp : msgs) {
                 for (size_t i = 0; i < kvp.second.size(); i++) {
-                    LogI("接收到了conv=%d:%s", kvp.first, kvp.second[i].c_str());
+                    LogI("接收到了conv=%d:%s", kvp.first, kvp.second[i].data.c_str());
                 }
             }
         }
 
-        std::map<int, std::vector<std::string>> kcpmsgs;
+        std::map<int, std::vector<TextMessage>> kcpmsgs;
         kcp_s.KCPReceive(kcpmsgs);
         if (!kcpmsgs.empty()) {
             for (auto& kvp : kcpmsgs) {
                 for (size_t i = 0; i < kvp.second.size(); i++) {
-                    LogI("KCP接收到了conv=%d:%s", kvp.first, kvp.second[i].c_str());
+                    LogI("KCP接收到了conv=%d:%s", kvp.first, kvp.second[i].data.c_str());
                 }
             }
         }

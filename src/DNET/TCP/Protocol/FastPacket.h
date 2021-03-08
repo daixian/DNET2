@@ -2,7 +2,7 @@
 
 #include "IPacket.h"
 
-namespace dxlib {
+namespace dnet {
 
 /**
  * 在消息的头使用一个int来标记消息长度.
@@ -120,7 +120,7 @@ class FastPacket : public IPacket
      *
      * @returns 如果解析到了完整数据包,返回解析到的结果个数.
      */
-    virtual int Unpack(const char* receBuff, int count, std::vector<std::vector<char>>& result, std::vector<int>& types) override
+    virtual int Unpack(const char* receBuff, int count, std::vector<BinMessage>& result) override
     {
         //result.clear();
         int msgCount = 0;
@@ -189,8 +189,10 @@ class FastPacket : public IPacket
                         if (_unpackDataBuff.size() == curMsgLen) {
                             //当前解析到了一条完整消息
                             msgCount++;
-                            result.push_back(_unpackDataBuff);
-                            types.push_back(curMsgType);
+                            BinMessage message;
+                            message.type = curMsgType;
+                            message.data = _unpackDataBuff;
+                            result.push_back(message);
 
                             //清空记录状态
                             isHasHead = false;
@@ -227,7 +229,7 @@ class FastPacket : public IPacket
      *
      * @returns 如果解析到了完整数据包,返回解析到的结果个数.
      */
-    virtual int Unpack(const char* receBuff, int count, std::vector<std::string>& result, std::vector<int>& types) override
+    virtual int Unpack(const char* receBuff, int count, std::vector<TextMessage>& result) override
     {
         //result.clear();
 
@@ -296,8 +298,11 @@ class FastPacket : public IPacket
                         if (_unpackDataBuff.size() == curMsgLen) {
                             //当前解析到了一条完整消息
                             msgCount++;
-                            result.push_back(std::string(_unpackDataBuff.data(), _unpackDataBuff.size()));
-                            types.push_back(curMsgType);
+
+                            TextMessage message;
+                            message.type = curMsgType;
+                            message.data = std::string(_unpackDataBuff.data(), _unpackDataBuff.size());
+                            result.push_back(message);
 
                             //清空记录状态
                             isHasHead = false;
@@ -353,4 +358,4 @@ class FastPacket : public IPacket
     std::vector<char> _unpackDataBuff;
 };
 
-} // namespace dxlib
+} // namespace dnet

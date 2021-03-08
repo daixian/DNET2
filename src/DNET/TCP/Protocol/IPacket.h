@@ -3,8 +3,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "Message.hpp"
 
-namespace dxlib {
+namespace dnet {
 
 /**
  * 代表一个协议的打包方法.
@@ -73,11 +74,10 @@ class IPacket
      * @param       receBuff Buffer for rece data.
      * @param       len      Number of.
      * @param [out] result   解包数据.
-     * @param [out] type     解包数据类型.
      *
      * @returns 如果解析到了完整数据包,返回解析到的结果个数.
      */
-    virtual int Unpack(const char* receBuff, int len, std::vector<std::vector<char>>& result, std::vector<int>& types) = 0;
+    virtual int Unpack(const char* receBuff, int len, std::vector<BinMessage>& result) = 0;
 
     /**
      * Unpacks
@@ -88,11 +88,10 @@ class IPacket
      * @param       receBuff Buffer for rece data.
      * @param       len      Number of.
      * @param [out] result   解包数据.
-     * @param [out] type     解包数据类型.
      *
      * @returns 如果解析到了完整数据包,返回解析到的结果个数.
      */
-    virtual int Unpack(const char* receBuff, int len, std::vector<std::string>& result, std::vector<int>& types) = 0;
+    virtual int Unpack(const char* receBuff, int len, std::vector<TextMessage>& result) = 0;
 
     /**
      * 当前是否有不完整的解析的数据还在缓存里面.
@@ -107,4 +106,4 @@ class IPacket
   private:
 };
 
-} // namespace dxlib
+} // namespace dnet
