@@ -234,20 +234,21 @@ DNET_EXPORT DNetError __cdecl dnServerUpdate(dnet::TCPServer* server)
  * @author daixian
  * @date 2021/1/7
  *
- * @param [in,out] server If non-null, the server.
- * @param          id     The identifier.
- * @param          msg    The message.
- * @param          len    The length.
+ * @param [in] server server对象.
+ * @param      id     The identifier.
+ * @param      msg    The message.
+ * @param      len    The length.
+ * @param      type   消息类型.
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSend(dnet::TCPServer* server, int id, const char* msg, int len)
+DNET_EXPORT DNetError __cdecl dnServerSend(dnet::TCPServer* server, int id, const char* msg, int len, int type)
 {
     dnet::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
-    int res = ptr->Send(id, msg, len);
+    int res = ptr->Send(id, msg, len, type);
     if (res > 0) {
         return DNetError::Ok;
     }
@@ -262,20 +263,21 @@ DNET_EXPORT DNetError __cdecl dnServerSend(dnet::TCPServer* server, int id, cons
  * @author daixian
  * @date 2021/1/7
  *
- * @param [in,out] server If non-null, the server.
- * @param          id     The identifier.
- * @param          msg    The message.
- * @param          len    The length.
+ * @param [in] server If non-null, the server.
+ * @param      id     The identifier.
+ * @param      msg    The message.
+ * @param      len    The length.
+ * @param      type   The type.
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerKCPSend(dnet::TCPServer* server, int id, const char* msg, int len)
+DNET_EXPORT DNetError __cdecl dnServerKCPSend(dnet::TCPServer* server, int id, const char* msg, int len, int type)
 {
     dnet::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
-    int res = ptr->KCPSend(id, msg, len);
+    int res = ptr->KCPSend(id, msg, len, type);
     if (res > 0) {
         return DNetError::Ok;
     }
@@ -292,7 +294,7 @@ DNET_EXPORT DNetError __cdecl dnServerKCPSend(dnet::TCPServer* server, int id, c
  * @author daixian
  * @date 2020/8/22
  *
- * @param [in] client  绑定的客户端.
+ * @param [in] client  客户端对象指针.
  * @param      tcpProc u3d传过来的回调函数指针.
  * @param      kcpProc The kcp procedure.
  *
@@ -312,8 +314,8 @@ DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dnet::TCPClient* client, Me
  * @author daixian
  * @date 2018/4/22
  *
- * @param [in]  name   If non-null, the name.
- * @param [out] client [in,out] If non-null, the client.
+ * @param [in]  name   客户端名字.
+ * @param [out] client 客户端对象指针.
  *
  * @returns 成功返回0.
  */
@@ -336,7 +338,7 @@ DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dnet::TCPClient*& clien
  * @author daixian
  * @date 2020/12/31
  *
- * @param [in] client If non-null, the server.
+ * @param [in] client 客户端对象指针.
  * @param [in] host   If non-null, the host.
  * @param      port   The port.
  *
@@ -364,7 +366,7 @@ DNET_EXPORT DNetError __cdecl dnClientConnect(dnet::TCPClient* client, char* hos
  * @author daixian
  * @date 2021/1/25
  *
- * @param [in]  client     If non-null, the client.
+ * @param [in]  client     客户端对象指针.
  * @param [out] isAccepted True if is accepted, false if not.
  *
  * @returns A DNetError.
@@ -391,7 +393,7 @@ DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dnet::TCPClient* client, bool& 
  * @author daixian
  * @date 2020/12/31
  *
- * @param [in] client If non-null, the server.
+ * @param [in] client 客户端对象指针.
  *
  * @returns An int.
  */
@@ -419,7 +421,7 @@ DNET_EXPORT DNetError __cdecl dnClientClose(dnet::TCPClient* client)
  * @author daixian
  * @date 2020/12/31
  *
- * @param [in] client If non-null, the server.
+ * @param [in] client 客户端对象指针.
  *
  * @returns An int.
  */
@@ -466,24 +468,25 @@ DNET_EXPORT DNetError __cdecl dnClientUpdate(dnet::TCPClient* client)
 }
 
 /**
- * 向服务器端发送数据.
+ * 客户端向服务器端发送数据.
  *
  * @author daixian
  * @date 2021/1/7
  *
- * @param [in,out] client If non-null, the server.
- * @param          msg    The message.
- * @param          len    The length.
+ * @param [in] client 客户端对象指针.
+ * @param      msg    The message.
+ * @param      len    The length.
+ * @param      type   The type.
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientSend(dnet::TCPClient* client, const char* msg, int len)
+DNET_EXPORT DNetError __cdecl dnClientSend(dnet::TCPClient* client, const char* msg, int len, int type)
 {
     dnet::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
-    int res = ptr->Send(msg, len);
+    int res = ptr->Send(msg, len, type);
     if (res > 0) {
         return DNetError::Ok;
     }
@@ -493,24 +496,25 @@ DNET_EXPORT DNetError __cdecl dnClientSend(dnet::TCPClient* client, const char* 
 }
 
 /**
- * 向服务器端发送KCP数据.
+ * 客户端向服务器端发送KCP数据.
  *
  * @author daixian
  * @date 2021/1/7
  *
- * @param [in,out] client If non-null, the server.
- * @param          msg    The message.
- * @param          len    The length.
+ * @param [in] client 客户端对象指针.
+ * @param      msg    The message.
+ * @param      len    The length.
+ * @param      type   The type.
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientKCPSend(dnet::TCPClient* client, const char* msg, int len)
+DNET_EXPORT DNetError __cdecl dnClientKCPSend(dnet::TCPClient* client, const char* msg, int len, int type)
 {
     dnet::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
         return DNetError::InvalidContext;
     }
-    int res = ptr->KCPSend(msg, len);
+    int res = ptr->KCPSend(msg, len, type);
     if (res > 0) {
         return DNetError::Ok;
     }

@@ -173,6 +173,7 @@ TEST(TCPServer, sendBytes)
 
 TEST(TCPServer, sendBytes_localhost)
 {
+    int msgType = 3;
     TCPServer server("server", "localhost", 8341);
     server.Start();
     server.WaitStarted();
@@ -181,7 +182,7 @@ TEST(TCPServer, sendBytes_localhost)
     client.Connect("localhost", 8341);
 
     std::string msg = "1234567890";
-    int res = client.Send(msg.c_str(), msg.size());
+    int res = client.Send(msg.c_str(), msg.size(), msgType);
     int tcpId = server.GetRemotes().begin()->first;
 
     {
@@ -191,6 +192,7 @@ TEST(TCPServer, sendBytes_localhost)
         if (!msg.empty())
             for (auto& kvp : msgs) {
                 ASSERT_EQ(kvp.second.size(), 1);
+                ASSERT_EQ(kvp.second[0].type, msgType);
                 ASSERT_EQ(kvp.second[0].data.size(), msg.size());
                 LogI("服务器收到了客户端数据!");
                 //回发这条数据

@@ -233,10 +233,11 @@ class TCPServer
      * @param  tcpID Identifier for the TCP.
      * @param  data  The data.
      * @param  len   The length.
+     * @param  type  (Optional)消息类型.
      *
      * @returns An int.
      */
-    int KCPSend(int tcpID, const char* data, size_t len);
+    int KCPSend(int tcpID, const char* data, size_t len, int type = -1);
 
     /**
      * Kcp receive
@@ -244,7 +245,7 @@ class TCPServer
      * @author daixian
      * @date 2021/1/11
      *
-     * @param [in,out] msgs The msgs.
+     * @param [out] msgs The msgs.
      *
      * @returns An int.
      */

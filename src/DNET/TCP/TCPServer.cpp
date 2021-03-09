@@ -235,14 +235,14 @@ class TCPServer::Impl
         return (int)msgs.size();
     }
 
-    int KCPSend(int tcpID, const char* data, size_t len)
+    int KCPSend(int tcpID, const char* data, size_t len, int type)
     {
         TCPClient* client = clientManager.GetClient(tcpID);
         if (client == nullptr) {
             return -1;
         }
 
-        return client->KCPSend(data, len); //发送打包后的数据
+        return client->KCPSend(data, len, type); //发送打包后的数据
     }
 
     int KCPReceive(std::map<int, std::vector<TextMessage>>& msgs)
@@ -398,9 +398,9 @@ std::map<int, TCPClient*> TCPServer::GetRemotes()
     return map;
 }
 
-int TCPServer::KCPSend(int tcpID, const char* data, size_t len)
+int TCPServer::KCPSend(int tcpID, const char* data, size_t len, int type)
 {
-    return _impl->KCPSend(tcpID, data, len);
+    return _impl->KCPSend(tcpID, data, len, type);
 }
 
 int TCPServer::KCPReceive(std::map<int, std::vector<TextMessage>>& msgs)
