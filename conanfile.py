@@ -11,7 +11,7 @@ os.system("chcp 65001")
 
 class DNETConan(ConanFile):
     name = "dnet"
-    version = "1.1.0"
+    version = "1.1.1"
     license = "<Put the package license here>"
     author = "daixian<amano_tooko@qq.com>"
     url = "https://github.com/daixian/DNET2"
@@ -28,7 +28,7 @@ class DNETConan(ConanFile):
     def requirements(self):
         self.requires("dlog/[>=2.6.0]@daixian/stable")
         self.requires("xuexuesharp/[>=0.0.16]@daixian/stable")
-        self.requires("xuexuejson/[>1.1.0]@daixian/stable")
+        self.requires("xuexuejson/[>=1.3.0]@daixian/stable")
 
     def _configure_cmake(self):
         '''

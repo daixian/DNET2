@@ -1,7 +1,7 @@
 ﻿#include "dlog/dlog.h"
 #include <thread>
 
-#include "xuexuejson/Serialize.hpp"
+#include "xuexuejson/JsonMapper.hpp"
 #include "xuexue/csharp/csharp.h"
 
 #include "Poco/Net/SocketAddress.h"

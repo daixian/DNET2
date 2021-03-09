@@ -2,7 +2,7 @@
 
 #include <string>
 #include <memory>
-#include "xuexuejson/Serialize.hpp"
+#include "xuexuejson/JsonMapper.hpp"
 
 namespace dnet {
 

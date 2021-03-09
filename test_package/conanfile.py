@@ -17,7 +17,7 @@ class HelloWorldTestConan(ConanFile):
         """作为一个test_package这里需要包含所有的依赖"""
         self.requires("dlog/[>=2.6.0]@daixian/stable")
         self.requires("xuexuesharp/[>=0.0.16]@daixian/stable")
-        self.requires("xuexuejson/[>1.1.0]@daixian/stable")
+        self.requires("xuexuejson/[>=1.3.0]@daixian/stable")
 
     def build_requirements(self):
         self.build_requires("gtest/1.8.1@bincrafters/stable")
