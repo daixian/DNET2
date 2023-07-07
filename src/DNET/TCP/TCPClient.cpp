@@ -30,7 +30,7 @@ class TCPClient::Impl
     {
         receBuff.resize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);
 
-        //随机生成一个uuid
+        // 随机生成一个uuid
         Poco::UUIDGenerator uuidGen;
         uuid = uuidGen.createRandom().toString();
 
@@ -42,7 +42,7 @@ class TCPClient::Impl
 
     ~Impl()
     {
-        //析构的时候尝试关闭
+        // 析构的时候尝试关闭
         Close();
 
         delete acceptData;
@@ -141,13 +141,13 @@ class TCPClient::Impl
 
         using Poco::Timespan;
 
-        Close(); //先试试无脑关闭
+        Close(); // 先试试无脑关闭
 
         try {
             LogI("TCPClient.Connect():{%s}尝试连接远程%s:%d...", uuid.c_str(), host.c_str(), port);
             Poco::Net::SocketAddress sa(Poco::Net::SocketAddress::Family::IPv4, host, port);
 
-            socket.connect(sa); //这个是阻塞的连接
+            socket.connect(sa); // 这个是阻塞的连接
         }
         catch (Poco::Net::ConnectionRefusedException& e) {
             LogE("TCPClient.Connect():连接拒绝! %s,%s", e.what(), e.message().c_str());
@@ -168,15 +168,15 @@ class TCPClient::Impl
         LogI("TCPClient.Connect():连接成功!");
         isConnected = true;
 
-        //setopt timeout
+        // setopt timeout
         Timespan timeout3(5000000);
-        socket.setReceiveTimeout(timeout3); //retn void
+        socket.setReceiveTimeout(timeout3); // retn void
         Timespan timeout4(5000000);
-        socket.setSendTimeout(timeout4); //retn void
+        socket.setSendTimeout(timeout4); // retn void
 
-        //setopt bufsize
-        socket.setReceiveBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE); //buff大小
-        socket.setSendBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);    //buff大小
+        // setopt bufsize
+        socket.setReceiveBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE); // buff大小
+        socket.setSendBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);    // buff大小
 
         socket.setNoDelay(true);
         socket.setBlocking(false);
@@ -210,7 +210,7 @@ class TCPClient::Impl
                 delete udpSocket;
                 udpSocket = nullptr;
                 if (kcpClient != nullptr) {
-                    kcpClient->socket = nullptr;
+                    kcpClient->udpSocket = nullptr;
                 }
             }
 
@@ -236,25 +236,25 @@ class TCPClient::Impl
         if (!isConnected) {
             return -1;
         }
-        //数据打包
+        // 数据打包
         std::vector<char> package;
         packet.Pack(data, (int)len, package, type);
-        sendMsgCount++; //计数
+        sendMsgCount++; // 计数
 
         int sendCount = 0;
         for (size_t i = 0; i < 10; i++) {
-            int res = socket.sendBytes(package.data() + sendCount, (int)package.size() - sendCount); //发送打包后的数据
+            int res = socket.sendBytes(package.data() + sendCount, (int)package.size() - sendCount); // 发送打包后的数据
             sendCount += res;
             if (sendCount == (int)package.size()) {
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); //如果不能完整发送那么就休息100ms
+            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 如果不能完整发送那么就休息100ms
         }
 
         return sendCount;
     }
 
-    //发送认证
+    // 发送认证
     int SendAccept()
     {
         if (acceptData != nullptr) {
@@ -262,7 +262,7 @@ class TCPClient::Impl
         }
 
         acceptData = new Accept();
-        std::string acceptStr = acceptData->CreateAcceptString(uuid, name); //创建一个认证的自字符串发给服务器
+        std::string acceptStr = acceptData->CreateAcceptString(uuid, name); // 创建一个认证的自字符串发给服务器
         return Send(acceptStr.c_str(), acceptStr.size(), XUEXUE_TCP_CLIENT_INTERNAL_CMD_TYPE);
     }
 
@@ -270,10 +270,10 @@ class TCPClient::Impl
     template <typename T>
     int ProcCMD(std::vector<Message<T>>& msgs)
     {
-        //遍历所有收到的消息
+        // 遍历所有收到的消息
         for (size_t msgIndex = 0; msgIndex < msgs.size();) {
             if (msgs[msgIndex].type == XUEXUE_TCP_CLIENT_INTERNAL_CMD_TYPE) {
-                //命令消息:0号命令
+                // 命令消息:0号命令
                 std::string& acceptStr = msgs[msgIndex].to_string();
                 ProcCMDAccept(acceptStr);
 
@@ -292,7 +292,7 @@ class TCPClient::Impl
     void ProcCMDAccept(std::string& acceptStr)
     {
         if (IsInServer()) {
-            //自己是服务器端
+            // 自己是服务器端
             acceptData = new Accept();
 
             if (!acceptData->VerifyAccept(acceptStr)) {
@@ -301,7 +301,7 @@ class TCPClient::Impl
             }
             else {
                 // 重新指向分配过的tcpID,这里clientManager会发出事件
-                clientManager->RegisterClientWithUUID(acceptData->uuidC, tcpID); //这个函数会重新分配tcpID
+                clientManager->RegisterClientWithUUID(acceptData->uuidC, tcpID); // 这个函数会重新分配tcpID
                 std::string replyStr = acceptData->ReplyAcceptString(acceptStr, uuid, name, tcpID);
                 poco_assert(!replyStr.empty());
                 // replyStr有内容,有效的认证信息,自己是服务器端
@@ -313,7 +313,7 @@ class TCPClient::Impl
                      socket.peerAddress().port(),
                      tcpID);
 
-                //如果id不等那么说明没有继承原来的kcp
+                // 如果id不等那么说明没有继承原来的kcp
                 if (kcpClient->Conv() != tcpID) {
                     kcpClient->Create(tcpID);
                 }
@@ -324,14 +324,14 @@ class TCPClient::Impl
             }
         }
         else {
-            //自己是客户端
+            // 自己是客户端
             if (acceptData->VerifyReplyAccept(acceptStr.data())) {
                 tcpID = acceptData->conv;
 
-                //服务器返回的Accept验证成功
+                // 服务器返回的Accept验证成功
                 poco_assert(acceptData->conv >= 0);
 
-                //如果id不等那么说明没有继承原来的kcp
+                // 如果id不等那么说明没有继承原来的kcp
                 if (kcpClient->Conv() != tcpID) {
                     kcpClient->Create(tcpID);
                 }
@@ -344,7 +344,7 @@ class TCPClient::Impl
         }
     }
 
-    //根据当前TCPSocket的本地端口来绑定UDP.
+    // 根据当前TCPSocket的本地端口来绑定UDP.
     void InitUDPSocket()
     {
         if (udpSocket != nullptr) {
@@ -399,7 +399,7 @@ class TCPClient::Impl
         if (socket.poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
             LogE("TCPClient.Receive():poll到了异常!");
             OnError();
-            return -1; //Close之后socket没了,不能往下执行了
+            return -1; // Close之后socket没了,不能往下执行了
         }
         try {
             while (true) {
@@ -435,12 +435,12 @@ class TCPClient::Impl
         }
 
         if (udpSocket != nullptr) {
-            //这是本地的client
+            // 这是本地的client
             try {
-                //socket尝试接收
+                // socket尝试接收
                 Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
                 int n = udpSocket->receiveFrom(receBuffUDP.data(), (int)receBuffUDP.size(), remote);
-                int res = kcpClient->Receive(receBuffUDP.data(), n, msgs);
+                int res = kcpClient->IKCPRecv(receBuffUDP.data(), n, msgs);
                 if (res > 0) {
                     lastKcpReceTime = clock();
                 }
@@ -452,11 +452,11 @@ class TCPClient::Impl
             catch (const std::exception& e) {
                 LogE("TCPClient.KCPReceive():异常e=%s", e.what());
             }
-            //执行到这里说明接收错误了
+            // 执行到这里说明接收错误了
             OnError();
         }
         else {
-            //LogE("TCPClient.KCPReceive():本地udpSocket=null");
+            // LogE("TCPClient.KCPReceive():本地udpSocket=null");
         }
 
         return -1;
@@ -464,8 +464,8 @@ class TCPClient::Impl
 
     int KCPReceive(const char* data, size_t len, std::vector<TextMessage>& msgs)
     {
-        //实际上此时如果是TCPServer那么已经由TCPServer的函数中调用了一次Socket接收,所以这里直接送数据.
-        int res = kcpClient->Receive(data, len, msgs);
+        // 实际上此时如果是TCPServer那么已经由TCPServer的函数中调用了一次Socket接收,所以这里直接送数据.
+        int res = kcpClient->IKCPRecv(data, len, msgs);
         if (res > 0) {
             lastKcpReceTime = clock();
         }
@@ -526,20 +526,20 @@ void TCPClient::CreateWithServer(int tcpID, void* socket, void* clientManager,
 {
     using Poco::Timespan;
 
-    //TCPClient obj;
-    obj._impl->tcpID = tcpID; //这里有访问权限
+    // TCPClient obj;
+    obj._impl->tcpID = tcpID; // 这里有访问权限
     obj._impl->clientManager = (ClientManager*)clientManager;
-    obj._impl->socket = *(Poco::Net::StreamSocket*)socket; //拷贝一次
+    obj._impl->socket = *(Poco::Net::StreamSocket*)socket; // 拷贝一次
 
-    //setopt timeout
+    // setopt timeout
     Timespan timeout3(5000000);
-    obj._impl->socket.setReceiveTimeout(timeout3); //retn void
+    obj._impl->socket.setReceiveTimeout(timeout3); // retn void
     Timespan timeout4(5000000);
-    obj._impl->socket.setSendTimeout(timeout4); //retn void
+    obj._impl->socket.setSendTimeout(timeout4); // retn void
 
-    //setopt bufsize
-    obj._impl->socket.setReceiveBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE); //buff大小
-    obj._impl->socket.setSendBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);    //buff大小
+    // setopt bufsize
+    obj._impl->socket.setReceiveBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE); // buff大小
+    obj._impl->socket.setSendBufferSize(XUEXUE_TCP_CLIENT_BUFFER_SIZE);    // buff大小
 
     obj._impl->socket.setNoDelay(true);
     obj._impl->socket.setBlocking(false);
@@ -612,7 +612,7 @@ int TCPClient::Connect(const std::string& host, int port)
 
 int TCPClient::Send(const char* data, size_t len, int type)
 {
-    return _impl->Send(data, len, type); //未规定用户数据类型为1
+    return _impl->Send(data, len, type); // 未规定用户数据类型为1
 }
 
 int TCPClient::Receive(std::vector<BinMessage>& msgs)
@@ -636,13 +636,13 @@ int TCPClient::WaitAvailable(int waitCount)
 {
     for (size_t i = 0; i < waitCount; i++) {
         int res = _impl->Available();
-        if (res < 0) { //这里应该是错误,就不用等了
+        if (res < 0) { // 这里应该是错误,就不用等了
             return res;
         }
         if (_impl->Available() > 0) {
-            return res; //如果等到了已经有了接收数据那么就直接返回.
+            return res; // 如果等到了已经有了接收数据那么就直接返回.
         }
-        //等待100ms
+        // 等待100ms
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return 0;
@@ -654,10 +654,10 @@ int TCPClient::WaitAccepted(int waitCount)
         std::vector<TextMessage> msgs;
         Receive(msgs);
 
-        if (IsAccepted()) { //这里应该是错误,就不用等了
+        if (IsAccepted()) { // 这里应该是错误,就不用等了
             return 1;
         }
-        //等待100ms
+        // 等待100ms
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return 0;

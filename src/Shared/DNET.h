@@ -1,12 +1,14 @@
 ﻿#pragma once
 
+#include "ErrorType.h"
+
 #include "DNET/TCP/TCPServer.h"
 #include "DNET/TCP/TCPClient.h"
 
 // --------------------- windows ---------------------
 #if defined(_WIN32) || defined(_WIN64)
 // 如果是库自身构建时
-#    if defined(DNET_DLL_EXPORTS) //导出库使用dll模式
+#    if defined(DNET_DLL_EXPORTS) // 导出库使用dll模式
 #        define DNET_EXPORT extern "C" __declspec(dllexport)
 #        define DNET__LOCAL
 #    else
@@ -19,27 +21,8 @@
 #    define DLOG_EXPORT __attribute__((visibility("default")))
 #    define DLOG__LOCAL __attribute__((visibility("hidden")))
 #
-#    define __cdecl //默认是，加上了反而有warning __attribute__((__cdecl__))
+#    define __cdecl // 默认是，加上了反而有warning __attribute__((__cdecl__))
 #endif
-
-enum class DNetError
-{
-    Unknown = -1,
-    Ok = 0,
-    NotImplemented = 1,
-    NotInitialized = 2,
-    AlreadyInitialized = 3,
-    InvalidParameter = 4,
-    InvalidContext = 5,
-    InvalidHandle = 6,
-    RuntimeIncompatible = 7,
-    RuntimeNotFound = 8,
-    SymbolNotFound = 9,
-    BufferTooSmall = 10,
-    SyncFailed = 11,
-    OperationFailed = 12,
-    InvalidAttribute = 13,
-};
 
 // 字符串消息的处理回调函数指针类型
 typedef void (*MessageProcCallback)(void* sender, int id, int msgType, const char* message);
