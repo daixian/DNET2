@@ -139,7 +139,7 @@ class KCPClient
     }
 
     /**
-     * 提供出来让他们可以暴力flush,这个flush会实际发送数据出去。
+     * 提供出来让他们可以暴力flush,这个flush会实际发送数据出去，一般貌似不需要调用这个函数。
      *
      * @author daixian
      * @date 2021/1/25

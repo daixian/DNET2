@@ -61,12 +61,18 @@ class KCPServer
     }
 
     /**
-     * @brief 等于update样的.
-     */
-    int ReceMessage()
+     * @brief 接收消息，这个需要不停的调用，因为update也要不停的调用，所以可以放到一起update。
+     * @param update 是否顺便update。
+     * @return 
+    */
+    int ReceMessage(bool update = true)
     {
         int receCount = 0;
         try {
+            if (update) {
+                Update();
+            }
+
             Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
             int n = udpSocket->receiveFrom(socketRecebuff.data(), (int)socketRecebuff.size(), remote);
             if (n <= 0) {
@@ -74,8 +80,6 @@ class KCPServer
             }
             // 要把所有客户端遍历一遍
             for (auto& kvp : mClient) {
-                // 这也顺便update一下吧
-                kvp.second->Update();
 
                 std::vector<TextMessage> msgs;
                 int res = kvp.second->IKCPRecv(socketRecebuff.data(), n, msgs);
@@ -91,8 +95,8 @@ class KCPServer
                     // lastKcpReceTime = clock();
                 }
 
-                  kvp.second->Flush();
-                // return res;
+                // 这里好像可以Flush一下
+                // kvp.second->Flush();
             }
         }
         catch (const Poco::Exception& e) {

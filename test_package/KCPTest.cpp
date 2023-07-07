@@ -137,6 +137,78 @@ TEST(KCPClient, send_rece_256)
     }
 }
 
+// 多线程的测试
+TEST(KCPClient, send_rece_MT)
+{
+    int msgTestNum = 1000;
+
+    KCPServer server;
+    server.Start(8810);
+    for (size_t i = 0; i < 8; i++) {
+        server.AddClient(i); // 8个信道
+    }
+
+    KCPServer clients[8];
+    for (size_t i = 0; i < 8; i++) {
+        clients[i].Start(8811 + i);
+        clients[i].AddClient(i);
+        clients[i].ClientSetRemote(i, "127.0.0.1", 8810);
+    }
+
+    bool isRun = true;
+    std::vector<std::thread> threads;
+    // 八线程，八个客户端
+    for (int tID = 0; tID < 8; tID++) {
+        KCPServer* client = &clients[tID];
+        threads.emplace_back(std::thread([client, tID, &isRun]() {
+            // for (int j = 0; j < 100; j++) {
+            //     std::string msg = Poco::format("conv%d send message id=%d", tID, j);
+            //     client->Send(tID, msg.c_str(), msg.size());
+
+            //    client->ReceMessage();
+            //}
+            int msgCount = 0;
+            while (isRun) {
+                client->ReceMessage();
+                int waitCount = client->GetClient(tID)->WaitSendCount();
+                if (waitCount > 50) {
+                    // 如果比较拥挤就先不发送
+                    //LogI("conv%d waitCount=%d", tID, waitCount);
+                }
+                else {
+                    std::string msg = Poco::format("conv%d send message id=%d", tID, msgCount);
+                    client->Send(tID, msg.c_str(), msg.size());
+                    msgCount++;
+                }
+            }
+        }));
+    }
+    int serverReceCount = 0;
+    int waitCount = 0;
+    while (true) {
+        //  接收驱动
+        serverReceCount += server.ReceMessage();
+        server.Update(); // 这里似乎不能调用Flush,但是可以调用Update没事
+
+        int successCount = 0;
+        if (server.mReceMessage.size() == 8) {
+            for (auto& kvp : server.mReceMessage) {
+                if (kvp.second.size() >= msgTestNum)
+                    successCount += 1;
+            }
+        }
+
+        if (successCount == 8) {
+            isRun = false;
+            break;
+        }
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+}
+
 #if aaa0123
 
 // 目前100条需要0.5秒
