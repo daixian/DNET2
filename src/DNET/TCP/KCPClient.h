@@ -28,6 +28,14 @@ class KCPClient
 {
   public:
     KCPClient();
+
+    /**
+     * @brief 这个类实际上不包含socket资源，所以构造的时候应该使用这个构造函数
+     * @param udpSocket
+     * @param conv
+     */
+    KCPClient(Poco::Net::DatagramSocket* udpSocket, int conv);
+
     ~KCPClient();
 
     // 是否是TCPServer端所属的Client
@@ -76,9 +84,8 @@ class KCPClient
     }
 
     /**
-     * 创建一个kcp协议.同时打开自己的udp端口
+     * 创建一个kcp协议.
      * @param conv 通信id.
-     * @param port 如果不为-1那么会打开自己的upd端口
      */
     void Create(int conv);
 

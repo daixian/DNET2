@@ -11,71 +11,37 @@
 using namespace dnet;
 using namespace std;
 
-// 一种Task的工作模式
-// TEST(UDP, create)
-//{
-//     KCP kcp(KCP::Type::Server, "localhost", 9991, 1024);
-//     kcp.Init();
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// }
-
-// TEST(UDP, createMany_S)
-//{
-//     for (size_t i = 0; i < 2; i++) {
-//         KCP kcp(KCP::Type::Server, "localhost", 9991, 1024);
-//         kcp.Init();
-//     }
-// }
-//
-// TEST(UDP, createMany_C)
-//{
-//     for (size_t i = 0; i < 1000; i++) {
-//         KCP kcp(KCP::Type::Client, "localhost", 9991, 1024);
-//         kcp.Init();
-//     }
-// }
-
-// TEST(UDP, send)
-//{
-//     KCP kcp_c(KCP::Type::Client, "localhost", 9991, 1024);
-//     kcp_c.Init();
-//     const char* msg = "12345678";
-//     kcp_c.Send(msg, sizeof(msg));
-//     std::this_thread::sleep_for(std::chrono::milliseconds(10500));
-// }
-
 TEST(KCPClient, send_rece_1)
 {
-    KCPServer server;
+    KCPServer server("server");
     server.Start(8810);
     server.AddClient(123);
 
-    KCPServer client;
+    KCPServer client("client");
     client.Start(8811);
     client.AddClient(123);
     client.ClientSetRemote(123, "127.0.0.1", 8810);
+
+    int serverReceCount = 0;
+    int clientReceCount = 0;
+    int waitCount = 0;
 
     for (size_t i = 0; i < 40; i++) {
         std::string msg = std::to_string(i);
         client.Send(123, msg.c_str(), msg.size());
     }
+    waitCount = client.GetClient(123)->WaitSendCount();
 
-    int serverReceCount = 0;
-    int clientReceCount = 0;
-    int waitCount = 0;
     while (true) {
-        server.GetClient(123)->Update();
-        client.GetClient(123)->Update();
-        // client.GetClient(123)->Flush();
-        // 接收驱动
+
+        //  接收驱动
         serverReceCount += server.ReceMessage();
         waitCount = server.GetClient(123)->WaitSendCount();
-        server.GetClient(123)->Flush();
 
         clientReceCount += client.ReceMessage(); // 客户端也要不停的调用这个
         // std::vector<TextMessage> cmsg;
         // client.ReceMessage(cmsg);
-        client.GetClient(123)->Flush();
+        // client.GetClient(123)->Flush();
         waitCount = client.GetClient(123)->WaitSendCount();
         if (serverReceCount == 40) {
             break;
@@ -85,9 +51,9 @@ TEST(KCPClient, send_rece_1)
 
 TEST(KCPClient, send_rece_256)
 {
-    KCPServer server;
+    KCPServer server("server");
     server.Start(8810);
-    KCPServer client;
+    KCPServer client("client");
     client.Start(8811);
 
     // 分配256个信道
@@ -142,14 +108,15 @@ TEST(KCPClient, send_rece_MT)
 {
     int msgTestNum = 1000;
 
-    KCPServer server;
+    KCPServer server("server");
     server.Start(8810);
     for (size_t i = 0; i < 8; i++) {
         server.AddClient(i); // 8个信道
     }
 
     KCPServer clients[8];
-    for (size_t i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++) {
+        clients[i].name = Poco::format("client%d", i);
         clients[i].Start(8811 + i);
         clients[i].AddClient(i);
         clients[i].ClientSetRemote(i, "127.0.0.1", 8810);
@@ -173,7 +140,7 @@ TEST(KCPClient, send_rece_MT)
                 int waitCount = client->GetClient(tID)->WaitSendCount();
                 if (waitCount > 50) {
                     // 如果比较拥挤就先不发送
-                    //LogI("conv%d waitCount=%d", tID, waitCount);
+                    // LogI("conv%d waitCount=%d", tID, waitCount);
                 }
                 else {
                     std::string msg = Poco::format("conv%d send message id=%d", tID, msgCount);

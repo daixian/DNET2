@@ -48,8 +48,13 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
 
 KCPClient::KCPClient()
 {
+    kcpReceBuf.resize(4 * 1024, 0);
+}
 
-    kcpReceBuf.resize(4 * 1024);
+KCPClient::KCPClient(Poco::Net::DatagramSocket* udpSocket, int conv) : udpSocket(udpSocket)
+{
+    kcpReceBuf.resize(4 * 1024, 0);
+    Create(conv);
 }
 
 KCPClient::~KCPClient()
@@ -112,7 +117,6 @@ int KCPClient::IKCPRecv(const char* buff, size_t len, std::vector<TextMessage>& 
         LogE("KCPClient.IKCPRecv():还没有初始化,不能接收!");
         return -2;
     }
-
     // 注意这里clear了
     msgs.clear();
 
@@ -130,6 +134,9 @@ int KCPClient::IKCPRecv(const char* buff, size_t len, std::vector<TextMessage>& 
 
             while (rece >= 0) {
                 rece = ikcp_recv(kcp, kcpReceBuf.data(), (int)kcpReceBuf.size());
+                if (rece == -3) {
+                    LogI("KCPClient.IKCPRecv():ikcp_recv返回了-3");
+                }
                 if (rece > 0) {
                     // 这里实际上应该只能找到1条消息
                     std::vector<TextMessage> msg1;

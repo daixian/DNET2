@@ -10,8 +10,11 @@ namespace dnet {
 class KCPServer
 {
   public:
-    KCPServer();
+    KCPServer(const std::string& name = "KCPServer");
     ~KCPServer();
+
+    // 对象的名字，只是方便调试
+    std::string name;
 
     // key是kcp的信道.
     std::map<int, KCPClient*> mClient;
@@ -30,9 +33,11 @@ class KCPServer
         udpSocket->setBlocking(false);
     }
 
+    /**
+     * @brief 关闭这个UDP端口。
+     */
     void Close()
     {
-
         if (udpSocket != nullptr) {
             udpSocket->close();
             delete udpSocket;
@@ -45,9 +50,19 @@ class KCPServer
      */
     void AddClient(int conv)
     {
-        mClient[conv] = new KCPClient();
-        mClient[conv]->Create(conv);
-        mClient[conv]->udpSocket = udpSocket;
+        mClient[conv] = new KCPClient(udpSocket, conv);
+    }
+
+    /**
+     * @brief 移除一个客户端。
+     * @param conv
+     */
+    void RemoveClient(int conv)
+    {
+        if (mClient.find(conv) != mClient.end()) {
+            delete mClient[conv];
+            mClient.erase(conv);
+        }
     }
 
     /**
@@ -63,8 +78,8 @@ class KCPServer
     /**
      * @brief 接收消息，这个需要不停的调用，因为update也要不停的调用，所以可以放到一起update。
      * @param update 是否顺便update。
-     * @return 
-    */
+     * @return
+     */
     int ReceMessage(bool update = true)
     {
         int receCount = 0;
@@ -78,9 +93,10 @@ class KCPServer
             if (n <= 0) {
                 return receCount;
             }
+            // LogI("KCPServer.ReceMessage():%s的UDPSocket接收到了消息长度%d", name.c_str(), n);
+
             // 要把所有客户端遍历一遍
             for (auto& kvp : mClient) {
-
                 std::vector<TextMessage> msgs;
                 int res = kvp.second->IKCPRecv(socketRecebuff.data(), n, msgs);
                 if (res == -1) {
@@ -153,7 +169,7 @@ class KCPServer
     }
 
   private:
-    // 自己的UDPSocket
+    // 自己的UDPSocket,所有的client都用的是这个
     Poco::Net::DatagramSocket* udpSocket = nullptr;
 
     // Socket接收用的buffer
