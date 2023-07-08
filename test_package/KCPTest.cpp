@@ -15,11 +15,11 @@ TEST(KCPClient, send_rece_1)
 {
     KCPServer server("server");
     server.Start(8810);
-    server.AddClient(123);
+    server.AddChannel(123);
 
     KCPServer client("client");
     client.Start(8811);
-    client.AddClient(123);
+    client.AddChannel(123);
     client.ClientSetRemote(123, "127.0.0.1", 8810);
 
     int serverReceCount = 0;
@@ -30,19 +30,19 @@ TEST(KCPClient, send_rece_1)
         std::string msg = std::to_string(i);
         client.Send(123, msg.c_str(), msg.size());
     }
-    waitCount = client.GetClient(123)->WaitSendCount();
+    waitCount = client.GetChannel(123)->WaitSendCount();
 
     while (true) {
 
         //  接收驱动
         serverReceCount += server.ReceMessage();
-        waitCount = server.GetClient(123)->WaitSendCount();
+        waitCount = server.GetChannel(123)->WaitSendCount();
 
         clientReceCount += client.ReceMessage(); // 客户端也要不停的调用这个
         // std::vector<TextMessage> cmsg;
         // client.ReceMessage(cmsg);
-        // client.GetClient(123)->Flush();
-        waitCount = client.GetClient(123)->WaitSendCount();
+        // client.GetChannel(123)->Flush();
+        waitCount = client.GetChannel(123)->WaitSendCount();
         if (serverReceCount == 40) {
             break;
         }
@@ -58,9 +58,9 @@ TEST(KCPClient, send_rece_256)
 
     // 分配256个信道
     for (size_t i = 0; i < 256; i++) {
-        server.AddClient(i);
+        server.AddChannel(i);
 
-        client.AddClient(i);
+        client.AddChannel(i);
         client.ClientSetRemote(i, "127.0.0.1", 8810);
     }
 
@@ -75,19 +75,19 @@ TEST(KCPClient, send_rece_256)
     int clientReceCount = 0;
     int waitCount = 0;
     while (true) {
-        // server.GetClient(123)->Update();
-        // client.GetClient(123)->Update();
-        //  client.GetClient(123)->Flush();
+        // server.GetChannel(123)->Update();
+        // client.GetChannel(123)->Update();
+        //  client.GetChannel(123)->Flush();
         //  接收驱动
         serverReceCount += server.ReceMessage();
-        waitCount = server.GetClient(123)->WaitSendCount();
+        waitCount = server.GetChannel(123)->WaitSendCount();
         server.Update(); // 这里似乎不能调用Flush,但是可以调用Update没事
 
         clientReceCount += client.ReceMessage(); // 客户端也要不停的调用这个
         // std::vector<TextMessage> cmsg;
         // client.ReceMessage(cmsg);
         client.Update();
-        waitCount = client.GetClient(123)->WaitSendCount();
+        waitCount = client.GetChannel(123)->WaitSendCount();
 
         int successCount = 0;
         if (server.mReceMessage.size() == 256) {
@@ -111,14 +111,14 @@ TEST(KCPClient, send_rece_MT)
     KCPServer server("server");
     server.Start(8810);
     for (size_t i = 0; i < 8; i++) {
-        server.AddClient(i); // 8个信道
+        server.AddChannel(i); // 8个信道
     }
 
     KCPServer clients[8];
     for (int i = 0; i < 8; i++) {
         clients[i].name = Poco::format("client%d", i);
         clients[i].Start(8811 + i);
-        clients[i].AddClient(i);
+        clients[i].AddChannel(i);
         clients[i].ClientSetRemote(i, "127.0.0.1", 8810);
     }
 
@@ -137,7 +137,7 @@ TEST(KCPClient, send_rece_MT)
             int msgCount = 0;
             while (isRun) {
                 client->ReceMessage();
-                int waitCount = client->GetClient(tID)->WaitSendCount();
+                int waitCount = client->GetChannel(tID)->WaitSendCount();
                 if (waitCount > 50) {
                     // 如果比较拥挤就先不发送
                     // LogI("conv%d waitCount=%d", tID, waitCount);

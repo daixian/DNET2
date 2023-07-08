@@ -21,23 +21,5 @@
 #    define __cdecl // 默认是，加上了反而有warning __attribute__((__cdecl__))
 #endif
 
-#include "DNET/TCP/KCPClient.h"
+#include "DNET/TCP/KCPServer.h"
 
-/**
- * @brief 创建一个客户端。
- * @param conv
- * @param client
- * @return
- */
-DNET_EXPORT DNetError __cdecl DNetKCPClientCreate(int conv, dnet::KCPClient*& client);
-
-/**
- * @brief 绑定。
- * @param client
- * @param datagramSocket
- * @param remote
- * @return
- */
-DNET_EXPORT DNetError __cdecl DNetKCPClientBind(dnet::KCPClient*& client,
-                                                Poco::Net::DatagramSocket* datagramSocket,
-                                                const Poco::Net::SocketAddress& remote);

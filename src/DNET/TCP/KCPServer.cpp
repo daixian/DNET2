@@ -1,6 +1,7 @@
 ﻿#include "KCPServer.h"
 
 namespace dnet {
+
 KCPServer::KCPServer(const std::string& name) : name(name)
 {
     socketRecebuff.resize(4 * 1024, 0);

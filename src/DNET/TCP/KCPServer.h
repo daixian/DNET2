@@ -1,11 +1,12 @@
 ﻿#pragma once
 
-#include "KCPClient.h"
+#include "KCPChannel.h"
 
 namespace dnet {
 
 /**
- * @brief 任何udp端实际都应该是一个server.由于KCP有信道,一个remote又可以对应多个信道.同时一个本地socket数据可以对应多个信道.
+ * @brief 任何udp端实际都应该是一个server.
+ *        由于KCP有信道,一个remote又可以对应多个信道.同时一个本地socket数据可以对应多个信道.
  */
 class KCPServer
 {
@@ -13,11 +14,11 @@ class KCPServer
     KCPServer(const std::string& name = "KCPServer");
     ~KCPServer();
 
-    // 对象的名字，只是方便调试
+    // 这个对象的名字，只是方便调试
     std::string name;
 
     // key是kcp的信道.
-    std::map<int, KCPClient*> mClient;
+    std::map<int, KCPChannel*> mClient;
 
     // key是kcp的信道.value是信道中的所有消息.
     std::map<int, std::vector<TextMessage>> mReceMessage;
@@ -48,16 +49,17 @@ class KCPServer
      * @brief 创建一个客户端,必须要有一个信道.
      * @param conv 信道id.
      */
-    void AddClient(int conv)
+    void AddChannel(int conv)
     {
-        mClient[conv] = new KCPClient(udpSocket, conv);
+        delete GetChannel(conv); // 关闭原来存在的
+        mClient[conv] = new KCPChannel(udpSocket, conv);
     }
 
     /**
      * @brief 移除一个客户端。
      * @param conv
      */
-    void RemoveClient(int conv)
+    void RemoveChannel(int conv)
     {
         if (mClient.find(conv) != mClient.end()) {
             delete mClient[conv];
@@ -70,9 +72,12 @@ class KCPServer
      * @param conv
      * @return
      */
-    KCPClient* GetClient(int conv)
+    KCPChannel* GetChannel(int conv)
     {
-        return mClient[conv];
+        if (mClient.find(conv) != mClient.end()) {
+            return mClient[conv];
+        }
+        return nullptr;
     }
 
     /**
@@ -116,19 +121,19 @@ class KCPServer
             }
         }
         catch (const Poco::Exception& e) {
-            LogE("KCPClient.ReceMessage():异常e=%s,%s", e.what(), e.message().c_str());
+            LogE("KCPServer.ReceMessage():异常e=%s,%s", e.what(), e.message().c_str());
         }
         catch (const std::exception& e) {
-            LogE("KCPClient.ReceMessage():异常e=%s", e.what());
+            LogE("KCPServer.ReceMessage():异常e=%s", e.what());
         }
         return receCount;
     }
 
     /**
-     * @brief 给某个信道设置一个远端.
-     * @param conv
-     * @param ip
-     * @param port
+     * @brief 给某个信道设置一个远端IP地址.
+     * @param conv 信道.
+     * @param ip 远端ip地址.
+     * @param port 远端端口.
      */
     void ClientSetRemote(int conv, std::string ip, int port)
     {
@@ -138,10 +143,10 @@ class KCPServer
 
     /**
      * @brief 向某个客户端发送一个消息.
-     * @param conv 客户端的信道
+     * @param conv 客户端的信道.
      * @param data 数据.
-     * @param len
-     * @param type
+     * @param len 数据长度.
+     * @param type 这个消息协议的类型.
      */
     void Send(int conv, const char* data, size_t len, int type = -1)
     {

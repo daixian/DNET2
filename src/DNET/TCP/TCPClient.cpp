@@ -15,7 +15,7 @@
 
 #include <thread>
 
-#include "KCPClient.h"
+#include "KCPChannel.h"
 
 #define XUEXUE_TCP_CLIENT_BUFFER_SIZE 8 * 1024
 
@@ -34,7 +34,7 @@ class TCPClient::Impl
         Poco::UUIDGenerator uuidGen;
         uuid = uuidGen.createRandom().toString();
 
-        kcpClient = std::shared_ptr<KCPClient>(new KCPClient());
+        kcpClient = std::shared_ptr<KCPChannel>(new KCPChannel());
 
         lastTcpReceTime = clock();
         lastKcpReceTime = clock();
@@ -110,7 +110,7 @@ class TCPClient::Impl
     Poco::BasicEvent<TCPEventRemoteClose> eventRemoteClose;
 
     // 这个TCP可以附加绑定一个kcp
-    std::shared_ptr<KCPClient> kcpClient{nullptr};
+    std::shared_ptr<KCPChannel> kcpClient{nullptr};
 
     // 是否是服务端的client
     bool IsInServer()

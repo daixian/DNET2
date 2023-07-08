@@ -24,19 +24,19 @@ namespace dnet {
  * @author daixian
  * @date 2020/5/12
  */
-class KCPClient
+class KCPChannel
 {
   public:
-    KCPClient();
+    KCPChannel();
 
     /**
      * @brief 这个类实际上不包含socket资源，所以构造的时候应该使用这个构造函数
      * @param udpSocket
      * @param conv
      */
-    KCPClient(Poco::Net::DatagramSocket* udpSocket, int conv);
+    KCPChannel(Poco::Net::DatagramSocket* udpSocket, int conv);
 
-    ~KCPClient();
+    ~KCPChannel();
 
     // 是否是TCPServer端所属的Client
     bool isServer = false;
@@ -77,7 +77,7 @@ class KCPClient
     {
         if (kcp == nullptr) {
             // 这里经常作为有没有初始化的一并判断
-            // LogE("KCPClient.Conv():kcp == nullptr,没有conv..");
+            // LogE("KCPChannel.Conv():kcp == nullptr,没有conv..");
             return -1;
         }
         return kcp->conv;
@@ -139,7 +139,7 @@ class KCPClient
     void Update()
     {
         if (kcp == nullptr) {
-            LogE("KCPClient.Update():还没有初始化,不能发送!");
+            LogE("KCPChannel.Update():还没有初始化,不能发送!");
             return;
         }
         ikcp_update(kcp, iclock());
@@ -154,7 +154,7 @@ class KCPClient
     void Flush()
     {
         if (kcp == nullptr) {
-            LogE("KCPClient.flush():还没有初始化,不能发送!");
+            LogE("KCPChannel.flush():还没有初始化,不能发送!");
             return;
         }
         ikcp_flush(kcp); // 尝试暴力flush

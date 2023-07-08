@@ -1,4 +1,4 @@
-﻿#include "KCPClient.h"
+﻿#include "KCPChannel.h"
 
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/MulticastSocket.h"
@@ -28,43 +28,43 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
 {
     try {
         // kcp里有几个位置调用udp_output的时候没有传user参数进来,所以不能使用这个参数
-        KCPClient* u = (KCPClient*)kcp->user;
+        KCPChannel* u = (KCPChannel*)kcp->user;
         // if (u->remote.a nullptr) {
         //     LogE("KCP2.udp_output():%s还没有remote记录,不能发送!", u->name);
         //     return -1;
         // }
-        // LogD("KCPClient.udp_output():向{%s}发送! len=%d", u->uuid_remote.c_str(), len);
+        // LogD("KCPChannel.udp_output():向{%s}发送! len=%d", u->uuid_remote.c_str(), len);
         return u->udpSocket->sendTo(buf, len, u->remote);
     }
     catch (const Poco::Exception& e) {
-        LogE("KCPClient.kcpc_udp_output():异常%s %s", e.what(), e.message().c_str());
+        LogE("KCPChannel.kcpc_udp_output():异常%s %s", e.what(), e.message().c_str());
         return -1;
     }
     catch (const std::exception& e) {
-        LogE("KCPClient.kcpc_udp_output():异常:%s", e.what());
+        LogE("KCPChannel.kcpc_udp_output():异常:%s", e.what());
         return -1;
     }
 }
 
-KCPClient::KCPClient()
+KCPChannel::KCPChannel()
 {
     kcpReceBuf.resize(4 * 1024, 0);
 }
 
-KCPClient::KCPClient(Poco::Net::DatagramSocket* udpSocket, int conv) : udpSocket(udpSocket)
+KCPChannel::KCPChannel(Poco::Net::DatagramSocket* udpSocket, int conv) : udpSocket(udpSocket)
 {
     kcpReceBuf.resize(4 * 1024, 0);
     Create(conv);
 }
 
-KCPClient::~KCPClient()
+KCPChannel::~KCPChannel()
 {
     if (kcp != nullptr) {
         ikcp_release(kcp);
     }
 }
 
-void KCPClient::Create(int conv)
+void KCPChannel::Create(int conv)
 {
     if (kcp != nullptr) {
         ikcp_release(kcp);
@@ -88,10 +88,10 @@ void KCPClient::Create(int conv)
     kcp->fastresend = 1;
 }
 
-int KCPClient::Send(const char* data, size_t len, int type)
+int KCPChannel::Send(const char* data, size_t len, int type)
 {
     if (udpSocket == nullptr || kcp == nullptr) {
-        LogE("KCPClient.Send():还没有初始化,不能发送!");
+        LogE("KCPChannel.Send():还没有初始化,不能发送!");
         return -1;
     }
 
@@ -102,7 +102,7 @@ int KCPClient::Send(const char* data, size_t len, int type)
 
     int res = ikcp_send(kcp, package.data(), (int)package.size());
     if (res < 0) {
-        LogE("KCPClient.Send():发送异常返回 res=%d", res);
+        LogE("KCPChannel.Send():发送异常返回 res=%d", res);
     }
     // ikcp_flush(kcp); // 尝试暴力flush
 
@@ -111,17 +111,17 @@ int KCPClient::Send(const char* data, size_t len, int type)
 }
 
 // 这是KCP的协议接收
-int KCPClient::IKCPRecv(const char* buff, size_t len, std::vector<TextMessage>& msgs)
+int KCPChannel::IKCPRecv(const char* buff, size_t len, std::vector<TextMessage>& msgs)
 {
     if (kcp == nullptr) {
-        LogE("KCPClient.IKCPRecv():还没有初始化,不能接收!");
+        LogE("KCPChannel.IKCPRecv():还没有初始化,不能接收!");
         return -2;
     }
     // 注意这里clear了
     msgs.clear();
 
     if (len != -1) {
-        // LogD("KCPClient.Receive(): Socket接收到了数据,长度%d", len);
+        // LogD("KCPChannel.Receive(): Socket接收到了数据,长度%d", len);
 
         // 尝试给kcp看看是否是它的信道的数据
         int rece = ikcp_input(kcp, buff, (long)len);
@@ -135,7 +135,7 @@ int KCPClient::IKCPRecv(const char* buff, size_t len, std::vector<TextMessage>& 
             while (rece >= 0) {
                 rece = ikcp_recv(kcp, kcpReceBuf.data(), (int)kcpReceBuf.size());
                 if (rece == -3) {
-                    LogI("KCPClient.IKCPRecv():ikcp_recv返回了-3");
+                    LogI("KCPChannel.IKCPRecv():ikcp_recv返回了-3");
                 }
                 if (rece > 0) {
                     // 这里实际上应该只能找到1条消息
