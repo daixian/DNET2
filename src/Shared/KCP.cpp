@@ -1,4 +1,7 @@
 ﻿#include "KCP.h"
+#include <sstream>
+#include "Poco/DeflatingStream.h"
+#include "Poco/InflatingStream.h"
 
 using namespace dnet;
 
@@ -136,8 +139,20 @@ DNET_EXPORT DNetError __stdcall xxKcpGetMessage(dnet::KCPServer* server,
             conv = kvp.first;
             auto& msg = kvp.second.front();
             type = msg.type;
-            len = msg.data.size();
-            memcpy(buffer, msg.data.data(), msg.data.size());
+            if (type == 100) {
+                // 这是GZIP压缩流,解压缩一下
+                std::stringstream iss(msg.data);
+                Poco::InflatingInputStream ideflater(iss, Poco::InflatingStreamBuf::STREAM_GZIP);
+                std::string str; // 解压缩的流结果
+                ideflater >> str;
+                len = str.size();
+                memcpy(buffer, str.data(), str.size());
+            }
+            else {
+                len = msg.data.size();
+                memcpy(buffer, msg.data.data(), msg.data.size());
+            }
+
             kvp.second.pop_front(); // 移除这条
             return DNetError::Ok;
         }
