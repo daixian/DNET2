@@ -11,7 +11,7 @@ os.system("chcp 65001")
 
 class DNETConan(ConanFile):
     name = "dnet"
-    version = "1.2.4"
+    version = "1.2.5"
     license = "<Put the package license here>"
     author = "daixian<amano_tooko@qq.com>"
     url = "https://github.com/daixian/DNET2"

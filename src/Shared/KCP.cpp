@@ -12,8 +12,15 @@ using namespace dnet;
 DNET_EXPORT DNetError __stdcall xxKcpCreate(KCPServer*& server, const char* name, int port)
 {
     server = new KCPServer(name);
-    server->Start(port);
-    return DNetError::Ok;
+    bool success = server->Start(port);
+    if (success) {
+        return DNetError::Ok;
+    }
+    else {
+        delete server;
+        server = nullptr;
+        return DNetError::OperationFailed;
+    }
 }
 
 /**
@@ -93,7 +100,10 @@ DNET_EXPORT DNetError __stdcall xxKcpSend(dnet::KCPServer* server, int conv, cha
     }
     KCPChannel* channel = server->GetChannel(conv);
     if (channel != nullptr) {
-        channel->Send(data, len, type);
+        int result = channel->Send(data, len, type);
+        if (result < 0) {
+            return DNetError::OperationFailed;
+        }
     }
     else {
         return DNetError::InvalidParameter;

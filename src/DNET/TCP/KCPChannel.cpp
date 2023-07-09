@@ -33,6 +33,10 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
             LogE("KCPChannel.kcpc_udp_output():conv%d还没有remote记录,不能发送!", u->kcp->conv);
             return -1;
         }
+        if (u->udpSocket == nullptr) {
+            LogE("KCPChannel.kcpc_udp_output():conv%d还没有socket,不能发送!", u->kcp->conv);
+            return -1;
+        }
         // LogI("KCPChannel.kcpc_udp_output():向{%s}发送! len=%d", u->remote->toString().c_str(), len);
         //
         //  返回发送了的byte

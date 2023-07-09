@@ -27,7 +27,7 @@ class KCPServer
      * @brief 开始监听一个UDP端口.
      * @param port
      */
-    void Start(int port)
+    bool Start(int port)
     {
         try {
             Poco::Net::SocketAddress sa(Poco::Net::IPAddress("0.0.0.0"), port);
@@ -40,13 +40,19 @@ class KCPServer
             for (auto& kvp : mChannel) {
                 kvp.second->udpSocket = udpSocket;
             }
+
+            return true;
         }
         catch (const Poco::Exception& e) {
             LogE("KCPServer.Start():异常e=%s,%s", e.what(), e.message().c_str());
+            Close();
         }
         catch (const std::exception& e) {
             LogE("KCPServer.Start():异常e=%s", e.what());
+            Close();
         }
+
+        return false;
     }
 
     /**
@@ -58,6 +64,7 @@ class KCPServer
             if (udpSocket != nullptr) {
                 udpSocket->close();
                 delete udpSocket;
+                udpSocket = nullptr;
             }
         }
         catch (const Poco::Exception& e) {
@@ -65,6 +72,12 @@ class KCPServer
         }
         catch (const std::exception& e) {
             LogE("KCPServer.Close():异常e=%s", e.what());
+        }
+
+        udpSocket = nullptr;
+        // 重新赋值
+        for (auto& kvp : mChannel) {
+            kvp.second->udpSocket = nullptr;
         }
     }
 
