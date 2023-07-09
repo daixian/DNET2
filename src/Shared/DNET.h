@@ -21,7 +21,7 @@
 #    define DLOG_EXPORT __attribute__((visibility("default")))
 #    define DLOG__LOCAL __attribute__((visibility("hidden")))
 #
-#    define __cdecl // 默认是，加上了反而有warning __attribute__((__cdecl__))
+#    define __stdcall // 默认是，加上了反而有warning __attribute__((__stdcall__))
 #endif
 
 // 字符串消息的处理回调函数指针类型
@@ -39,7 +39,7 @@ typedef void (*MessageProcCallback)(void* sender, int id, int msgType, const cha
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dnet::TCPServer* server, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
+DNET_EXPORT DNetError __stdcall dnServerSetMessageProc(dnet::TCPServer* server, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
 
 /**
  * 创建服务器端.
@@ -54,7 +54,7 @@ DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dnet::TCPServer* server, Me
  *
  * @returns 成功返回0.
  */
-DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host, int port, dnet::TCPServer*& server);
+DNET_EXPORT DNetError __stdcall dnServerCreate(const char* name, const char* host, int port, dnet::TCPServer*& server);
 
 /**
  * 服务器启动.
@@ -68,7 +68,7 @@ DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host,
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerStart(dnet::TCPServer* server);
+DNET_EXPORT DNetError __stdcall dnServerStart(dnet::TCPServer* server);
 
 /**
  * 服务器关闭.
@@ -80,7 +80,7 @@ DNET_EXPORT DNetError __cdecl dnServerStart(dnet::TCPServer* server);
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerClose(dnet::TCPServer* server);
+DNET_EXPORT DNetError __stdcall dnServerClose(dnet::TCPServer* server);
 
 /**
  * 服务器Update,实际上就是接收.
@@ -92,7 +92,7 @@ DNET_EXPORT DNetError __cdecl dnServerClose(dnet::TCPServer* server);
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerUpdate(dnet::TCPServer* server);
+DNET_EXPORT DNetError __stdcall dnServerUpdate(dnet::TCPServer* server);
 
 /**
  * 向某个客户端发送数据.
@@ -108,7 +108,7 @@ DNET_EXPORT DNetError __cdecl dnServerUpdate(dnet::TCPServer* server);
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSend(dnet::TCPServer* server, int id, const char* msg, int len, int type);
+DNET_EXPORT DNetError __stdcall dnServerSend(dnet::TCPServer* server, int id, const char* msg, int len, int type);
 
 /**
  * 向某个客户端发送数据.
@@ -124,7 +124,7 @@ DNET_EXPORT DNetError __cdecl dnServerSend(dnet::TCPServer* server, int id, cons
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerKCPSend(dnet::TCPServer* server, int id, const char* msg, int len, int type);
+DNET_EXPORT DNetError __stdcall dnServerKCPSend(dnet::TCPServer* server, int id, const char* msg, int len, int type);
 
 //----------------------------------------------------------- 客户端 -----------------------------------------------------------
 
@@ -140,7 +140,7 @@ DNET_EXPORT DNetError __cdecl dnServerKCPSend(dnet::TCPServer* server, int id, c
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dnet::TCPClient* client, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
+DNET_EXPORT DNetError __stdcall dnClientSetMessageProc(dnet::TCPClient* client, MessageProcCallback tcpProc, MessageProcCallback kcpProc);
 
 /**
  * 创建客户端.
@@ -153,7 +153,7 @@ DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dnet::TCPClient* client, Me
  *
  * @returns 成功返回0.
  */
-DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dnet::TCPClient*& client);
+DNET_EXPORT DNetError __stdcall dnClientCreate(char* name, dnet::TCPClient*& client);
 
 /**
  * 客户端连接服务器.
@@ -167,7 +167,7 @@ DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dnet::TCPClient*& clien
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientConnect(dnet::TCPClient* client, char* host, int port);
+DNET_EXPORT DNetError __stdcall dnClientConnect(dnet::TCPClient* client, char* host, int port);
 
 /**
  * 客户端是否已经连接服务器
@@ -180,7 +180,7 @@ DNET_EXPORT DNetError __cdecl dnClientConnect(dnet::TCPClient* client, char* hos
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dnet::TCPClient* client, bool& isAccepted);
+DNET_EXPORT DNetError __stdcall dnClientIsAccepted(dnet::TCPClient* client, bool& isAccepted);
 
 /**
  * 客户端关闭.
@@ -192,7 +192,7 @@ DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dnet::TCPClient* client, bool& 
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientClose(dnet::TCPClient* client);
+DNET_EXPORT DNetError __stdcall dnClientClose(dnet::TCPClient* client);
 
 /**
  * 客户端Update,实际上就是接收.
@@ -204,7 +204,7 @@ DNET_EXPORT DNetError __cdecl dnClientClose(dnet::TCPClient* client);
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientUpdate(dnet::TCPClient* client);
+DNET_EXPORT DNetError __stdcall dnClientUpdate(dnet::TCPClient* client);
 
 /**
  * 向服务器端发送数据.
@@ -219,7 +219,7 @@ DNET_EXPORT DNetError __cdecl dnClientUpdate(dnet::TCPClient* client);
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientSend(dnet::TCPClient* client, const char* msg, int len, int type);
+DNET_EXPORT DNetError __stdcall dnClientSend(dnet::TCPClient* client, const char* msg, int len, int type);
 
 /**
  * 向服务器端发送KCP数据.
@@ -234,4 +234,4 @@ DNET_EXPORT DNetError __cdecl dnClientSend(dnet::TCPClient* client, const char* 
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientKCPSend(dnet::TCPClient* client, const char* msg, int len, int type);
+DNET_EXPORT DNetError __stdcall dnClientKCPSend(dnet::TCPClient* client, const char* msg, int len, int type);

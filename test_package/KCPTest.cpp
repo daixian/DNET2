@@ -20,7 +20,7 @@ TEST(KCPClient, send_rece_1)
     KCPServer client("client");
     client.Start(8811);
     client.AddChannel(123);
-    client.ClientSetRemote(123, "127.0.0.1", 8810);
+    client.ChannelSetRemote(123, "127.0.0.1", 8810);
 
     int serverReceCount = 0;
     int clientReceCount = 0;
@@ -61,7 +61,7 @@ TEST(KCPClient, send_rece_256)
         server.AddChannel(i);
 
         client.AddChannel(i);
-        client.ClientSetRemote(i, "127.0.0.1", 8810);
+        client.ChannelSetRemote(i, "127.0.0.1", 8810);
     }
 
     for (int i = 0; i < 256; i++) {
@@ -119,7 +119,7 @@ TEST(KCPClient, send_rece_MT)
         clients[i].name = Poco::format("client%d", i);
         clients[i].Start(8811 + i);
         clients[i].AddChannel(i);
-        clients[i].ClientSetRemote(i, "127.0.0.1", 8810);
+        clients[i].ChannelSetRemote(i, "127.0.0.1", 8810);
     }
 
     bool isRun = true;

@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "KCPChannel.h"
-
+#include <deque>
 namespace dnet {
 
 /**
@@ -21,7 +21,7 @@ class KCPServer
     std::map<int, KCPChannel*> mClient;
 
     // key是kcp的信道.value是信道中的所有消息.
-    std::map<int, std::vector<TextMessage>> mReceMessage;
+    std::map<int, std::deque<TextMessage>> mReceMessage;
 
     /**
      * @brief 开始监听一个UDP端口.
@@ -110,7 +110,7 @@ class KCPServer
                 }
                 kvp.second->remote = remote; // 记录这个remote
                 if (res > 0) {
-                    std::vector<TextMessage>& vReceMessage = mReceMessage[kvp.first]; // 这个信道的所有消息
+                    auto& vReceMessage = mReceMessage[kvp.first]; // 这个信道的所有消息
                     vReceMessage.insert(vReceMessage.end(), msgs.begin(), msgs.end());
                     receCount += msgs.size();
                     // lastKcpReceTime = clock();
@@ -135,7 +135,7 @@ class KCPServer
      * @param ip 远端ip地址.
      * @param port 远端端口.
      */
-    void ClientSetRemote(int conv, std::string ip, int port)
+    void ChannelSetRemote(int conv, std::string ip, int port)
     {
         Poco::Net::SocketAddress addr(Poco::Net::IPAddress(ip), port);
         mClient[conv]->Bind(udpSocket, addr);

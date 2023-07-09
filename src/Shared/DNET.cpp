@@ -62,7 +62,7 @@ void deleteClient(dnet::TCPClient* ptr)
     }
 }
 
-DNET_EXPORT DNetError __cdecl dnLogInit(const char* appName)
+DNET_EXPORT DNetError __stdcall xxLogInit(const char* appName)
 {
     dlog_init("log", appName, dlog_init_relative::APPDATA);
     return DNetError::Ok;
@@ -80,7 +80,7 @@ DNET_EXPORT DNetError __cdecl dnLogInit(const char* appName)
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dnet::TCPServer* server, MessageProcCallback tcpProc, MessageProcCallback kcpProc)
+DNET_EXPORT DNetError __stdcall dnServerSetMessageProc(dnet::TCPServer* server, MessageProcCallback tcpProc, MessageProcCallback kcpProc)
 {
     User* user = (User*)server->user;
     user->tcpMessageProc = tcpProc;
@@ -101,7 +101,7 @@ DNET_EXPORT DNetError __cdecl dnServerSetMessageProc(dnet::TCPServer* server, Me
  *
  * @returns 成功返回0.
  */
-DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host, int port, dnet::TCPServer*& server)
+DNET_EXPORT DNetError __stdcall dnServerCreate(const char* name, const char* host, int port, dnet::TCPServer*& server)
 {
     try {
         server = new dnet::TCPServer(name, host, port);
@@ -126,7 +126,7 @@ DNET_EXPORT DNetError __cdecl dnServerCreate(const char* name, const char* host,
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerStart(dnet::TCPServer* server)
+DNET_EXPORT DNetError __stdcall dnServerStart(dnet::TCPServer* server)
 {
     dnet::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
@@ -152,7 +152,7 @@ DNET_EXPORT DNetError __cdecl dnServerStart(dnet::TCPServer* server)
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerClose(dnet::TCPServer* server)
+DNET_EXPORT DNetError __stdcall dnServerClose(dnet::TCPServer* server)
 {
     dnet::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
@@ -180,7 +180,7 @@ DNET_EXPORT DNetError __cdecl dnServerClose(dnet::TCPServer* server)
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnServerUpdate(dnet::TCPServer* server)
+DNET_EXPORT DNetError __stdcall dnServerUpdate(dnet::TCPServer* server)
 {
     using namespace dnet;
     dnet::TCPServer* ptr = findServer(server);
@@ -242,7 +242,7 @@ DNET_EXPORT DNetError __cdecl dnServerUpdate(dnet::TCPServer* server)
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerSend(dnet::TCPServer* server, int id, const char* msg, int len, int type)
+DNET_EXPORT DNetError __stdcall dnServerSend(dnet::TCPServer* server, int id, const char* msg, int len, int type)
 {
     dnet::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
@@ -271,7 +271,7 @@ DNET_EXPORT DNetError __cdecl dnServerSend(dnet::TCPServer* server, int id, cons
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnServerKCPSend(dnet::TCPServer* server, int id, const char* msg, int len, int type)
+DNET_EXPORT DNetError __stdcall dnServerKCPSend(dnet::TCPServer* server, int id, const char* msg, int len, int type)
 {
     dnet::TCPServer* ptr = findServer(server);
     if (ptr == nullptr) {
@@ -300,7 +300,7 @@ DNET_EXPORT DNetError __cdecl dnServerKCPSend(dnet::TCPServer* server, int id, c
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dnet::TCPClient* client, MessageProcCallback tcpProc, MessageProcCallback kcpProc)
+DNET_EXPORT DNetError __stdcall dnClientSetMessageProc(dnet::TCPClient* client, MessageProcCallback tcpProc, MessageProcCallback kcpProc)
 {
     User* user = (User*)client->user;
     user->tcpMessageProc = tcpProc;
@@ -319,7 +319,7 @@ DNET_EXPORT DNetError __cdecl dnClientSetMessageProc(dnet::TCPClient* client, Me
  *
  * @returns 成功返回0.
  */
-DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dnet::TCPClient*& client)
+DNET_EXPORT DNetError __stdcall dnClientCreate(char* name, dnet::TCPClient*& client)
 {
     try {
         client = new dnet::TCPClient(name);
@@ -344,7 +344,7 @@ DNET_EXPORT DNetError __cdecl dnClientCreate(char* name, dnet::TCPClient*& clien
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientConnect(dnet::TCPClient* client, char* host, int port)
+DNET_EXPORT DNetError __stdcall dnClientConnect(dnet::TCPClient* client, char* host, int port)
 {
     dnet::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
@@ -371,7 +371,7 @@ DNET_EXPORT DNetError __cdecl dnClientConnect(dnet::TCPClient* client, char* hos
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dnet::TCPClient* client, bool& isAccepted)
+DNET_EXPORT DNetError __stdcall dnClientIsAccepted(dnet::TCPClient* client, bool& isAccepted)
 {
     dnet::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
@@ -397,7 +397,7 @@ DNET_EXPORT DNetError __cdecl dnClientIsAccepted(dnet::TCPClient* client, bool& 
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientClose(dnet::TCPClient* client)
+DNET_EXPORT DNetError __stdcall dnClientClose(dnet::TCPClient* client)
 {
     dnet::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
@@ -425,7 +425,7 @@ DNET_EXPORT DNetError __cdecl dnClientClose(dnet::TCPClient* client)
  *
  * @returns An int.
  */
-DNET_EXPORT DNetError __cdecl dnClientUpdate(dnet::TCPClient* client)
+DNET_EXPORT DNetError __stdcall dnClientUpdate(dnet::TCPClient* client)
 {
     using namespace dnet;
     TCPClient* ptr = findClient(client);
@@ -480,7 +480,7 @@ DNET_EXPORT DNetError __cdecl dnClientUpdate(dnet::TCPClient* client)
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientSend(dnet::TCPClient* client, const char* msg, int len, int type)
+DNET_EXPORT DNetError __stdcall dnClientSend(dnet::TCPClient* client, const char* msg, int len, int type)
 {
     dnet::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {
@@ -508,7 +508,7 @@ DNET_EXPORT DNetError __cdecl dnClientSend(dnet::TCPClient* client, const char* 
  *
  * @returns A DNetError.
  */
-DNET_EXPORT DNetError __cdecl dnClientKCPSend(dnet::TCPClient* client, const char* msg, int len, int type)
+DNET_EXPORT DNetError __stdcall dnClientKCPSend(dnet::TCPClient* client, const char* msg, int len, int type)
 {
     dnet::TCPClient* ptr = findClient(client);
     if (ptr == nullptr) {

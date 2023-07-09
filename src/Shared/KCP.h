@@ -18,7 +18,7 @@
 #    define DLOG_EXPORT __attribute__((visibility("default")))
 #    define DLOG__LOCAL __attribute__((visibility("hidden")))
 #
-#    define __cdecl // 默认是，加上了反而有warning __attribute__((__cdecl__))
+#    define __stdcall // 默认是，加上了反而有warning __attribute__((__stdcall__))
 #endif
 
 #include "DNET/TCP/KCPServer.h"
