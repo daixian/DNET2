@@ -18,7 +18,7 @@ class KCPServer
     std::string name;
 
     // key是kcp的信道.
-    std::map<int, KCPChannel*> mClient;
+    std::map<int, KCPChannel*> mChannel;
 
     // key是kcp的信道.value是信道中的所有消息.
     std::map<int, std::deque<TextMessage>> mReceMessage;
@@ -29,9 +29,24 @@ class KCPServer
      */
     void Start(int port)
     {
-        Poco::Net::SocketAddress sa(Poco::Net::IPAddress("0.0.0.0"), port);
-        udpSocket = new Poco::Net::DatagramSocket(sa);
-        udpSocket->setBlocking(false);
+        try {
+            Poco::Net::SocketAddress sa(Poco::Net::IPAddress("0.0.0.0"), port);
+            udpSocket = new Poco::Net::DatagramSocket(sa);
+            udpSocket->setReceiveTimeout(Poco::Timespan(3000));
+            udpSocket->setSendTimeout(Poco::Timespan(3000));
+            udpSocket->setBlocking(false);
+
+            // 重新赋值
+            for (auto& kvp : mChannel) {
+                kvp.second->udpSocket = udpSocket;
+            }
+        }
+        catch (const Poco::Exception& e) {
+            LogE("KCPServer.Start():异常e=%s,%s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("KCPServer.Start():异常e=%s", e.what());
+        }
     }
 
     /**
@@ -39,9 +54,17 @@ class KCPServer
      */
     void Close()
     {
-        if (udpSocket != nullptr) {
-            udpSocket->close();
-            delete udpSocket;
+        try {
+            if (udpSocket != nullptr) {
+                udpSocket->close();
+                delete udpSocket;
+            }
+        }
+        catch (const Poco::Exception& e) {
+            LogE("KCPServer.Close():异常e=%s,%s", e.what(), e.message().c_str());
+        }
+        catch (const std::exception& e) {
+            LogE("KCPServer.Close():异常e=%s", e.what());
         }
     }
 
@@ -52,7 +75,7 @@ class KCPServer
     void AddChannel(int conv)
     {
         delete GetChannel(conv); // 关闭原来存在的
-        mClient[conv] = new KCPChannel(udpSocket, conv);
+        mChannel[conv] = new KCPChannel(udpSocket, conv);
     }
 
     /**
@@ -61,9 +84,9 @@ class KCPServer
      */
     void RemoveChannel(int conv)
     {
-        if (mClient.find(conv) != mClient.end()) {
-            delete mClient[conv];
-            mClient.erase(conv);
+        if (mChannel.find(conv) != mChannel.end()) {
+            delete mChannel[conv];
+            mChannel.erase(conv);
         }
     }
 
@@ -74,8 +97,8 @@ class KCPServer
      */
     KCPChannel* GetChannel(int conv)
     {
-        if (mClient.find(conv) != mClient.end()) {
-            return mClient[conv];
+        if (mChannel.find(conv) != mChannel.end()) {
+            return mChannel[conv];
         }
         return nullptr;
     }
@@ -93,6 +116,11 @@ class KCPServer
                 Update();
             }
 
+            // 这样貌似没有用
+            // if (udpSocket->poll(Poco::Timespan(0), Poco::Net::Socket::SelectMode::SELECT_ERROR)) {
+            //    return -1;
+            //}
+
             Poco::Net::SocketAddress remote(Poco::Net::AddressFamily::IPv4);
             int n = udpSocket->receiveFrom(socketRecebuff.data(), (int)socketRecebuff.size(), remote);
             if (n <= 0) {
@@ -101,14 +129,14 @@ class KCPServer
             // LogI("KCPServer.ReceMessage():%s的UDPSocket接收到了消息长度%d", name.c_str(), n);
 
             // 要把所有客户端遍历一遍
-            for (auto& kvp : mClient) {
+            for (auto& kvp : mChannel) {
                 std::vector<TextMessage> msgs;
                 int res = kvp.second->IKCPRecv(socketRecebuff.data(), n, msgs);
                 if (res == -1) {
                     // 如果是-1那么表示不是这个信道的数据
                     continue;
                 }
-                kvp.second->remote = remote; // 记录这个remote
+                kvp.second->Bind(remote); // 记录这个remote
                 if (res > 0) {
                     auto& vReceMessage = mReceMessage[kvp.first]; // 这个信道的所有消息
                     vReceMessage.insert(vReceMessage.end(), msgs.begin(), msgs.end());
@@ -120,11 +148,16 @@ class KCPServer
                 // kvp.second->Flush();
             }
         }
+        catch (const Poco::Net::NetException& e) {
+            LogE("KCPServer.ReceMessage():异常e=%s,%s", e.what(), e.message().c_str());
+        }
         catch (const Poco::Exception& e) {
             LogE("KCPServer.ReceMessage():异常e=%s,%s", e.what(), e.message().c_str());
+            return -1;
         }
         catch (const std::exception& e) {
             LogE("KCPServer.ReceMessage():异常e=%s", e.what());
+            return -1;
         }
         return receCount;
     }
@@ -138,7 +171,7 @@ class KCPServer
     void ChannelSetRemote(int conv, std::string ip, int port)
     {
         Poco::Net::SocketAddress addr(Poco::Net::IPAddress(ip), port);
-        mClient[conv]->Bind(udpSocket, addr);
+        mChannel[conv]->Bind(udpSocket, addr);
     }
 
     /**
@@ -150,7 +183,7 @@ class KCPServer
      */
     void Send(int conv, const char* data, size_t len, int type = -1)
     {
-        mClient[conv]->Send(data, len, type);
+        mChannel[conv]->Send(data, len, type);
     }
 
     /**
@@ -158,7 +191,7 @@ class KCPServer
      */
     void Update()
     {
-        for (auto& kvp : mClient) {
+        for (auto& kvp : mChannel) {
             kvp.second->Update();
         }
     }
@@ -168,7 +201,7 @@ class KCPServer
      */
     void Flush()
     {
-        for (auto& kvp : mClient) {
+        for (auto& kvp : mChannel) {
             kvp.second->Flush();
         }
     }

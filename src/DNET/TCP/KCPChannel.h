@@ -6,6 +6,7 @@
 
 #include "Poco/Net/SocketAddress.h"
 #include "Poco/Net/DatagramSocket.h"
+#include "Poco/Net/NetException.h"
 
 #include "../kcp/ikcp.h"
 #include "../kcp/clock.hpp"
@@ -45,7 +46,7 @@ class KCPChannel
     Poco::Net::DatagramSocket* udpSocket = nullptr;
 
     // 要用UDP发送过去的地址.
-    Poco::Net::SocketAddress remote;
+    Poco::Net::SocketAddress* remote = nullptr;
 
     // kcp对象.一个kcp就是一个信道.
     ikcpcb* kcp = nullptr;
@@ -61,6 +62,9 @@ class KCPChannel
 
     // 所有发送的消息的总条数
     int sendMsgCount = 0;
+
+    // 上一次收到消息的时间
+    clock_t lastReceMsgTime;
 
     // TCP通信协议(这里先临时也使用这个,主要是要打进去一个msg type,好和tcp端一致)
     FastPacket packet;
@@ -101,7 +105,18 @@ class KCPChannel
     void Bind(Poco::Net::DatagramSocket* udpSocket, const Poco::Net::SocketAddress& remote)
     {
         this->udpSocket = udpSocket;
-        this->remote = remote;
+        Bind(remote);
+    }
+
+    /**
+     * @brief 绑定一个远端地址。
+     * @param remote 远端地址。
+     */
+    void Bind(const Poco::Net::SocketAddress& remote)
+    {
+        delete this->remote;
+        this->remote = new Poco::Net::SocketAddress();
+        *this->remote = remote;
     }
 
     /**
@@ -175,6 +190,15 @@ class KCPChannel
         }
 
         return ikcp_waitsnd(kcp);
+    }
+
+    /**
+     * @brief 上次收到消息距离现在的时间。单位秒
+     * @return 单位秒
+     */
+    float LastReceMessageTimeToNow()
+    {
+        return (clock() - lastReceMsgTime) / (float)(CLOCKS_PER_SEC);
     }
 
   private:

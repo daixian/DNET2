@@ -29,12 +29,22 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
     try {
         // kcp里有几个位置调用udp_output的时候没有传user参数进来,所以不能使用这个参数
         KCPChannel* u = (KCPChannel*)kcp->user;
-        // if (u->remote.a nullptr) {
-        //     LogE("KCP2.udp_output():%s还没有remote记录,不能发送!", u->name);
-        //     return -1;
-        // }
-        // LogD("KCPChannel.udp_output():向{%s}发送! len=%d", u->uuid_remote.c_str(), len);
-        return u->udpSocket->sendTo(buf, len, u->remote);
+        if (u->remote == nullptr) {
+            LogE("KCPChannel.kcpc_udp_output():conv%d还没有remote记录,不能发送!", u->kcp->conv);
+            return -1;
+        }
+        // LogI("KCPChannel.kcpc_udp_output():向{%s}发送! len=%d", u->remote->toString().c_str(), len);
+        //
+        //  返回发送了的byte
+        int sentbytes = u->udpSocket->sendTo(buf, len, *u->remote);
+
+        // dx:注意,windows下这里永远是会发送成功的。但是如果此时这个远程已经关闭了,那么会在接收udpSocket->receiveFrom()的时候
+        // 出现异常,十分无解. https://www.cnblogs.com/leading/archive/2012/06/24/udp-connection-reset-10054-under-windows.html
+        //
+        // if (sentbytes == 0) {
+        //    LogW("KCPChannel.kcpc_udp_output():发送长度为0？");
+        //}
+        return sentbytes;
     }
     catch (const Poco::Exception& e) {
         LogE("KCPChannel.kcpc_udp_output():异常%s %s", e.what(), e.message().c_str());
@@ -48,11 +58,13 @@ int kcpc_udp_output(const char* buf, int len, ikcpcb* kcp, void* user)
 
 KCPChannel::KCPChannel()
 {
+    lastReceMsgTime = clock();
     kcpReceBuf.resize(4 * 1024, 0);
 }
 
 KCPChannel::KCPChannel(Poco::Net::DatagramSocket* udpSocket, int conv) : udpSocket(udpSocket)
 {
+    lastReceMsgTime = clock();
     kcpReceBuf.resize(4 * 1024, 0);
     Create(conv);
 }
@@ -141,6 +153,7 @@ int KCPChannel::IKCPRecv(const char* buff, size_t len, std::vector<TextMessage>&
                     // 这里实际上应该只能找到1条消息
                     std::vector<TextMessage> msg1;
                     receMsgCount += packet.Unpack(kcpReceBuf.data(), rece, msg1);
+                    lastReceMsgTime = clock(); // 记录这个时间
                     for (size_t i = 0; i < msg1.size(); i++) {
                         msgs.push_back(msg1[i]);
                     }

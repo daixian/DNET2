@@ -11,7 +11,7 @@ KCPServer::~KCPServer()
 {
     Close();
 
-    for (auto& kvp : mClient) {
+    for (auto& kvp : mChannel) {
         delete kvp.second;
     }
 }
