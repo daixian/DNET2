@@ -91,16 +91,14 @@ void KCPChannel::Create(int conv)
     kcp->output = kcpc_udp_output;
 
     // 配置窗口大小：平均延迟200ms，每20ms发送一个包，
-    // 而考虑到丢包重发，设置最大收发窗口为128
-    ikcp_wndsize(kcp, 128, 128);
-    // ikcp_nodelay(kcp, 0, 10, 0, 0);
-    // ikcp_nodelay(kcp, 1, 10, 2, 1);
-    // kcp->rx_minrto = 10;
-    // kcp->fastresend = 1;
+    // 调整这个窗口大小好像没什么用。
+    ikcp_wndsize(kcp, 32, 128);
+    // 普通模式/正常模式：
+    // ikcp_nodelay(kcp, 0, 40, 0, 0);
 
-    // 这是快速模式的配置
-    ikcp_nodelay(kcp, 2, 10, 2, 1);
-    kcp->rx_minrto = 10;
+    // 这是一个标准的快速模式的配置
+    ikcp_nodelay(kcp, 1, 10, 2, 1);
+    kcp->rx_minrto = 10; //  TCP还是KCP计算RTO时都有最小RTO的限制，即便计算出来RTO为40ms，由于默认的RTO是100ms，协议只有在100ms后才能检测到丢包，快速模式下为30ms
     kcp->fastresend = 1;
 }
 
