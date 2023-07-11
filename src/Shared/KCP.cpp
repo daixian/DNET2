@@ -7,101 +7,105 @@ using namespace dnet;
 
 /**
  * @brief 打开一个KCP服务器.
- * @param server
+ * @param kcp
  * @param name
  * @param port
  * @return
  */
-DNET_EXPORT DNetError __stdcall xxKcpCreate(KCPServer*& server, const char* name, int port)
+DNET_EXPORT DNetError __stdcall xxKcpCreate(KCPServer*& kcp, const char* name, int port)
 {
-    server = new KCPServer(name);
-    bool success = server->Start(port);
+    kcp = new KCPServer(name);
+    bool success = kcp->Start(port);
     if (success) {
         return DNetError::Ok;
     }
     else {
-        delete server;
-        server = nullptr;
+        delete kcp;
+        kcp = nullptr;
         return DNetError::OperationFailed;
     }
 }
 
 /**
  * @brief 添加一个信道.
- * @param server
+ * @param kcp
  * @param conv
  * @return
  */
-DNET_EXPORT DNetError __stdcall xxKcpAddChannel(dnet::KCPServer* server, int conv)
+DNET_EXPORT DNetError __stdcall xxKcpAddChannel(dnet::KCPServer* kcp, int conv)
 {
-    if (server == nullptr) {
+    if (kcp == nullptr) {
         return DNetError::InvalidContext;
     }
-    server->AddChannel(conv);
+    kcp->AddChannel(conv);
     return DNetError::Ok;
 }
 
 /**
  * @brief 设置一个远端地址.
- * @param server
+ * @param kcp
  * @param conv
  * @param ip
  * @param port
  * @return
  */
-DNET_EXPORT DNetError __stdcall xxKcpChannelSetRemote(dnet::KCPServer* server, int conv, const char* ip, int port)
+DNET_EXPORT DNetError __stdcall xxKcpChannelSetRemote(dnet::KCPServer* kcp, int conv, const char* ip, int port)
 {
-    if (server == nullptr) {
+    if (kcp == nullptr) {
         return DNetError::InvalidContext;
     }
-    server->ChannelSetRemote(conv, ip, port);
+    kcp->ChannelSetRemote(conv, ip, port);
     return DNetError::Ok;
 }
 
 /**
  * @brief 这个必须要不停的调用.
- * @param server
+ * @param kcp
  * @return
  */
-DNET_EXPORT DNetError __stdcall xxKcpReceMessage(dnet::KCPServer* server)
+DNET_EXPORT DNetError __stdcall xxKcpReceMessage(dnet::KCPServer* kcp)
 {
-    if (server == nullptr) {
+    if (kcp == nullptr) {
         return DNetError::InvalidContext;
     }
-    server->ReceMessage();
-    // server->mReceMessage
-    return DNetError::Ok;
+    int res = kcp->ReceMessage();
+    if (res < 0) {
+        DNetError::NetException;
+    }
+    else {
+        return DNetError::Ok;
+    }
 }
 
 /**
  * @brief 有时候也可以Update一下.
- * @param server
+ * @param kcp
  * @return
  */
-DNET_EXPORT DNetError __stdcall xxKcpUpdate(dnet::KCPServer* server)
+DNET_EXPORT DNetError __stdcall xxKcpUpdate(dnet::KCPServer* kcp)
 {
-    if (server == nullptr) {
+    if (kcp == nullptr) {
         return DNetError::InvalidContext;
     }
-    server->Update();
+    kcp->Update();
     return DNetError::Ok;
 }
 
 /**
  * @brief 发送数据.
- * @param server
+ * @param kcp
  * @param conv
  * @param data
  * @param len
  * @param type
  * @return
  */
-DNET_EXPORT DNetError __stdcall xxKcpSend(dnet::KCPServer* server, int conv, char* data, int len, int type)
+DNET_EXPORT DNetError __stdcall xxKcpSend(dnet::KCPServer* kcp, int conv, char* data, int len, int type)
 {
-    if (server == nullptr) {
+    if (kcp == nullptr) {
         return DNetError::InvalidContext;
     }
-    KCPChannel* channel = server->GetChannel(conv);
+    KCPChannel* channel = kcp->GetChannel(conv);
     if (channel != nullptr) {
         int result = channel->Send(data, len, type);
         if (result < 0) {
@@ -117,7 +121,7 @@ DNET_EXPORT DNetError __stdcall xxKcpSend(dnet::KCPServer* server, int conv, cha
 
 /**
  * @brief 尝试提取一条消息.
- * @param server
+ * @param kcp
  * @param buffer
  * @param bufferSize
  * @param success [out] 是否成功.
@@ -126,14 +130,14 @@ DNET_EXPORT DNetError __stdcall xxKcpSend(dnet::KCPServer* server, int conv, cha
  * @param len [out] 消息长度.
  * @return
  */
-DNET_EXPORT DNetError __stdcall xxKcpGetMessage(dnet::KCPServer* server,
+DNET_EXPORT DNetError __stdcall xxKcpGetMessage(dnet::KCPServer* kcp,
                                                 char* buffer, int bufferSize,
                                                 bool& success, int& conv, int& type, int& len)
 {
-    if (server == nullptr) {
+    if (kcp == nullptr) {
         return DNetError::InvalidContext;
     }
-    for (auto& kvp : server->mReceMessage) {
+    for (auto& kvp : kcp->mReceMessage) {
         if (kvp.second.size() > 0) {
             success = true; // 标记成功
             conv = kvp.first;
@@ -163,4 +167,25 @@ DNET_EXPORT DNetError __stdcall xxKcpGetMessage(dnet::KCPServer* server,
     type = -1;
     len = 0;
     return DNetError::Ok;
+}
+
+/**
+ * @brief 上次接收到消息到现在的时间。
+ * @param kcp
+ * @param conv
+ * @param timeToNow
+ * @return
+ */
+DNET_EXPORT DNetError __stdcall xxKcpLastReceMessageTimeToNow(dnet::KCPServer* kcp, int conv, float& timeToNow)
+{
+    if (kcp == nullptr) {
+        return DNetError::InvalidContext;
+    }
+    dnet::KCPChannel* channel = kcp->GetChannel(conv);
+    if (channel == nullptr) {
+        return DNetError::InvalidParameter;
+    }
+    else {
+        timeToNow = channel->LastReceMessageTimeToNow();
+    }
 }

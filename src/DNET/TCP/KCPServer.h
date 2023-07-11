@@ -119,7 +119,7 @@ class KCPServer
     /**
      * @brief 接收消息，这个需要不停的调用，因为update也要不停的调用，所以可以放到一起update。
      * @param update 是否顺便update。
-     * @return
+     * @return 返回-1那么是有出现网络异常。此时需要清理客户端。
      */
     int ReceMessage(bool update = true)
     {
@@ -163,6 +163,7 @@ class KCPServer
         }
         catch (const Poco::Net::NetException& e) {
             LogE("KCPServer.ReceMessage():异常e=%s,%s", e.what(), e.message().c_str());
+            return -1;
         }
         catch (const Poco::Exception& e) {
             LogE("KCPServer.ReceMessage():异常e=%s,%s", e.what(), e.message().c_str());

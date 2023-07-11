@@ -17,4 +17,5 @@ enum class DNetError
     SyncFailed = 11,
     OperationFailed = 12,
     InvalidAttribute = 13,
+    NetException = 14,
 };
