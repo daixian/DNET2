@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "ErrorType.h"
 
@@ -18,8 +18,8 @@
 
 // ---------- 非VC的编译器那么先不区分dllimport ---------------
 #else
-#    define DLOG_EXPORT __attribute__((visibility("default")))
-#    define DLOG__LOCAL __attribute__((visibility("hidden")))
+#    define DNET_EXPORT __attribute__((visibility("default")))
+#    define DNET__LOCAL __attribute__((visibility("hidden")))
 #
 #    define __stdcall // 默认是，加上了反而有warning __attribute__((__stdcall__))
 #endif

@@ -1,4 +1,4 @@
-﻿#include "TCPClient.h"
+#include "TCPClient.h"
 #include "xuexuejson/JsonMapper.hpp"
 
 #include "Poco/Net/Socket.h"
@@ -274,7 +274,7 @@ class TCPClient::Impl
         for (size_t msgIndex = 0; msgIndex < msgs.size();) {
             if (msgs[msgIndex].type == XUEXUE_TCP_CLIENT_INTERNAL_CMD_TYPE) {
                 // 命令消息:0号命令
-                std::string& acceptStr = msgs[msgIndex].to_string();
+                std::string acceptStr = msgs[msgIndex].to_string();
                 ProcCMDAccept(acceptStr);
 
                 // 移除这个命令消息
