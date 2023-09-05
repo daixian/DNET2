@@ -1,4 +1,4 @@
-#include "TCPClient.h"
+﻿#include "TCPClient.h"
 #include "xuexuejson/JsonMapper.hpp"
 
 #include "Poco/Net/Socket.h"
@@ -144,7 +144,7 @@ class TCPClient::Impl
         Close(); // 先试试无脑关闭
 
         try {
-            LogI("TCPClient.Connect():{%s}尝试连接远程%s:%d...", uuid.c_str(), host.c_str(), port);
+            LogI("TCPClient.Connect():{%s}尝试连接远程%s:%d", uuid.c_str(), host.c_str(), port);
             Poco::Net::SocketAddress sa(Poco::Net::SocketAddress::Family::IPv4, host, port);
 
             socket.connect(sa); // 这个是阻塞的连接
